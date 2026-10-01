@@ -71,3 +71,67 @@ pub fn run_qa(subject : String, preview : String, issue : @core.Issue) -> Array[
   problems.append(check_repeated_bodies(issue))
   problems
 }
+
+// ---------- 系列级 QA：多期之间的多样性与差异化 ----------
+
+/// 系列多样性：期与期之间标题不得完全重复
+pub fn check_series_title_diversity(series : @core.Series) -> Array[String] {
+  let problems : Array[String] = []
+  let seen : Array[String] = []
+  for i in series.issues {
+    let mut dup = false
+    for s in seen {
+      if s == i.title {
+        dup = true
+      }
+    }
+    if dup {
+      problems.push("系列内标题重复：「" + i.title + "」")
+    } else {
+      seen.push(i.title)
+    }
+  }
+  problems
+}
+
+/// 系列多样性：主行动（PrimaryCta）目标不得多期完全相同，
+/// 否则系列每期都在推同一件事，内容价值递减。
+pub fn check_cta_diversity(series : @core.Series) -> Array[String] {
+  let problems : Array[String] = []
+  let seen : Array[String] = []
+  for i in series.issues {
+    let mut cta_url : String? = None
+    for b in i.blocks {
+      for l in b.links {
+        if l.role == @core.LinkRole::PrimaryCta && cta_url == None {
+          cta_url = Some(l.url)
+        }
+      }
+    }
+    match cta_url {
+      Some(url) => {
+        let mut dup = false
+        for s in seen {
+          if s == url {
+            dup = true
+          }
+        }
+        if dup {
+          problems.push("主行动目标多期重复：" + url + "（" + i.title + "）")
+        } else {
+          seen.push(url)
+        }
+      }
+      None => ()
+    }
+  }
+  problems
+}
+
+/// 系列级聚合检查
+pub fn run_series_qa(series : @core.Series) -> Array[String] {
+  let problems : Array[String] = []
+  problems.append(check_series_title_diversity(series))
+  problems.append(check_cta_diversity(series))
+  problems
+}
