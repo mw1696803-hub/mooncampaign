@@ -1,0 +1,11 @@
+import {
+  "your-github-username/mooncampaign/core" @core,
+  "your-github-username/mooncampaign/dsl" @dsl,
+  "your-github-username/mooncampaign/gates" @gates,
+  "your-github-username/mooncampaign/links" @links,
+  "your-github-username/mooncampaign/render" @render,
+  "your-github-username/mooncampaign/qa" @qa,
+  "your-github-username/mooncampaign/retro" @retro,
+}
+
+pkgtype(kind: "executable")

@@ -1,0 +1,3 @@
+import {
+  "your-github-username/mooncampaign/core" @core,
+}
