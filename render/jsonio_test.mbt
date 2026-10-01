@@ -50,7 +50,7 @@ test "issue json 往返一致" {
       assert_true(parsed.blocks[0].body == issue.blocks[0].body)
       assert_true(parsed.blocks[0].links.length() == 1)
       assert_true(parsed.blocks[0].links[0].role == @core.LinkRole::PrimaryCta)
-      assert_true(parsed.blocks[0].links[0].utm.is_none())
+      assert_true(parsed.blocks[0].links[0].utm is None)
       assert_true(parsed.blocks[0].image_alt == Some("开箱照片"))
       assert_true(parsed.claims.length() == 1)
       assert_true(parsed.claims[0].status == @core.ClaimStatus::Pending)
@@ -73,11 +73,11 @@ test "json 转义解析（\\uXXXX 与代理对）" {
 }
 
 test "json 非法输入返回 None" {
-  assert_true(@render.json_to_issue("") .is_none())
-  assert_true(@render.json_to_issue("{bad").is_none())
-  assert_true(@render.json_to_issue("{\"id\": 1}").is_none())
-  assert_true(@render.json_to_issue("{\"id\": \"a\", \"status\": \"Nope\", \"blocks\": [], \"claims\": []}").is_none())
-  assert_true(@render.json_to_issue("[1, 2]").is_none())
+  assert_true(@render.json_to_issue("")  is None)
+  assert_true(@render.json_to_issue("{bad") is None)
+  assert_true(@render.json_to_issue("{\"id\": 1}") is None)
+  assert_true(@render.json_to_issue("{\"id\": \"a\", \"status\": \"Nope\", \"blocks\": [], \"claims\": []}") is None)
+  assert_true(@render.json_to_issue("[1, 2]") is None)
 }
 
 test "brief json 往返一致" {
@@ -89,7 +89,7 @@ test "brief json 往返一致" {
       assert_true(parsed.goals.length() == 2)
       assert_true(parsed.facts.length() == 2)
       assert_true(parsed.facts[0].confirmed)
-      assert_true(parsed.facts[1].value.is_none())
+      assert_true(parsed.facts[1].value is None)
     }
     None => assert_true(false)
   }

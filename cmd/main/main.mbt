@@ -1,10 +1,52 @@
 ///|
-/// mooncampaign CLI 演示入口
+/// mooncampaign CLI
 ///
-/// 运行：moon run cmd/main
-/// 演示一个虚构品牌 Campaign 从 Brief 到复盘反馈的完整闭环：
-///   编排检查 → 门禁（先失败后通过）→ UTM 补全 → 渲染 → QA → 复盘
+/// 用法（参数经 `--` 传入）：
+///   moon run cmd/main -- demo                完整闭环演示（默认）
+///   moon run cmd/main -- gate                事实/声明门禁演示
+///   moon run cmd/main -- json '<JSON>'       解析 Campaign/Issue JSON 并诊断
+///   moon run cmd/main -- retro '<反馈>'      复盘反馈 → 规则提炼
+///   moon run cmd/main -- help                用法说明
 fn main {
+  let args = @env.args()
+  // args[0] 为可执行文件路径，args[1] 起为子命令与参数
+  let cmd = if args.length() > 1 { args[1] } else { "demo" }
+  match cmd {
+    "demo" => run_demo()
+    "gate" => run_gate()
+    "json" => run_json(args)
+    "retro" => run_retro(args)
+    "help" => print_help()
+    _ => {
+      println("未知命令: " + cmd)
+      print_help()
+    }
+  }
+}
+
+fn print_help() -> Unit {
+  println("mooncampaign · 类型安全的系列内容编排引擎")
+  println("用法: moon run cmd/main -- <command> [args]")
+  println("  demo             完整闭环演示（默认）")
+  println("  gate             事实/声明门禁演示")
+  println("  json '<JSON>'    解析 Campaign/Issue JSON 并诊断")
+  println("  retro '<反馈>'   复盘反馈 → 规则提炼")
+  println("  help             显示本说明")
+}
+
+/// 提取子命令之后的参数（跳过程序路径与命令名）
+fn cmd_args(args : Array[String]) -> Array[String] {
+  let rest : Array[String] = []
+  let mut i = 2
+  while i < args.length() {
+    rest.push(args[i])
+    i = i + 1
+  }
+  rest
+}
+
+/// demo：完整闭环演示（编排 → 门禁 → UTM → 渲染 → QA → 复盘）
+fn run_demo() -> Unit {
   println("=== mooncampaign 系列内容编排引擎 · 演示 ===")
 
   // 1. Campaign Brief：事实冻结的入口
@@ -69,7 +111,7 @@ fn main {
   let mut cta_link : @core.Link? = None
   for b in tracked.blocks {
     for l in b.links {
-      if l.role == @core.LinkRole::PrimaryCta && cta_link.is_none() {
+      if l.role == @core.LinkRole::PrimaryCta && cta_link is None {
         cta_link = Some(l)
       }
     }
@@ -110,6 +152,102 @@ fn main {
   println("    下一期 Brief 规则数: " + next_brief.goals.length().to_string())
 
   println("\n=== 闭环完成：下一期继续 ===")
+}
+
+/// gate：事实/声明门禁演示
+fn run_gate() -> Unit {
+  let brief = build_brief()
+  let issue = build_issue()
+  println("=== 门禁演示 ===")
+  println("Brief 事实数: " + brief.facts.length().to_string())
+  println("Issue 声明数: " + issue.claims.length().to_string())
+  let (gated, problems) = @gates.gate(issue, brief)
+  println("门禁结果 -> " + gated.status.label())
+  for p in problems {
+    println("  ! " + p)
+  }
+  let approved = @gates.approve(gated)
+  let published = @gates.publish(approved)
+  println("门禁状态机: " + gated.status.label() + " → approve → " +
+    approved.status.label() + " → publish → " + published.status.label())
+}
+
+/// json：解析 Campaign/Issue JSON 并诊断
+/// 参数来源优先级：命令行参数（引号正常的环境）> 环境变量 MOONCAMPAIGN_JSON
+/// > 内置示例（Windows 下开箱即用）
+fn run_json(args : Array[String]) -> Unit {
+  let rest = cmd_args(args)
+  let s = if rest.is_empty() {
+    match @env.get_env_var("MOONCAMPAIGN_JSON") {
+      Some(v) => v
+      None => sample_campaign_json()
+    }
+  } else {
+    rest[0]
+  }
+  match @render.json_to_campaign(s) {
+    Some(campaign) => {
+      println("=== Campaign 诊断 ===")
+      println("产品: " + campaign.brief.product)
+      println("受众: " + campaign.brief.audience)
+      println("系列: " + campaign.series.name + "（" + campaign.series.issues.length().to_string() + " 期）")
+      for i in campaign.series.issues {
+        print_issue_diag(i)
+      }
+    }
+    None => {
+      match @render.json_to_issue(s) {
+        Some(issue) => {
+          println("=== Issue 诊断 ===")
+          print_issue_diag(issue)
+        }
+        None => {
+          println("JSON 解析失败：既不是 Campaign 也不是 Issue 格式")
+          println("提示: Windows 下命令行传参会剥离引号，请用环境变量方式：")
+          println("  $env:MOONCAMPAIGN_JSON='<JSON>'; moon run cmd/main -- json")
+        }
+      }
+    }
+  }
+}
+
+fn print_issue_diag(issue : @core.Issue) -> Unit {
+  println("\n  - " + issue.title + " [" + issue.status.label() + "]")
+  println("    模块数: " + issue.blocks.length().to_string())
+  for b in issue.blocks {
+    println("      * [" + b.kind.label() + "] " + b.title)
+  }
+  println("    声明数: " + issue.claims.length().to_string())
+  for c in issue.claims {
+    println("      ! [" + c.status.code() + "] " + c.text)
+  }
+  let qa_problems = @qa.run_qa(
+    "diagnostic",
+    "diagnostic",
+    issue,
+  )
+  if qa_problems.is_empty() {
+    println("    QA: 通过")
+  } else {
+    println("    QA: " + qa_problems.join(" | "))
+  }
+}
+
+/// retro：复盘反馈 → 规则提炼
+fn run_retro(args : Array[String]) -> Unit {
+  let rest = cmd_args(args)
+  if rest.is_empty() {
+    println("用法: moon run cmd/main -- retro '<复盘反馈文本>'")
+    return
+  }
+  let feedback = rest[0]
+  let rules = @retro.suggest_rules(feedback)
+  println("=== 复盘反馈 → 规则提炼 ===")
+  println("反馈: " + feedback)
+  println("提炼规则 " + rules.length().to_string() + " 条：")
+  for r in rules {
+    println("  - " + r)
+  }
 }
 
 /// 构造虚构品牌 Campaign Brief
@@ -165,6 +303,38 @@ fn build_issue() -> @core.Issue {
   issue
 }
 
+/// 内置示例 Campaign JSON（与 demo 数据一致，Windows 下无参演示用）
+fn sample_campaign_json() -> String {
+  "{\n" +
+    "  \"brief\": {\n" +
+    "    \"product\": \"Harbour & Salt 固体护手霜\",\n" +
+    "    \"audience\": \"30-60 岁女性，英国市场\",\n" +
+    "    \"goals\": [\"launch\", \"collect replies\"],\n" +
+    "    \"facts\": [\n" +
+    "      { \"key\": \"price\", \"value\": \"£12\", \"confirmed\": true },\n" +
+    "      { \"key\": \"claim_8h\", \"value\": null, \"confirmed\": false }\n" +
+    "    ]\n" +
+    "  },\n" +
+    "  \"series\": {\n" +
+    "    \"id\": \"ttw\",\n" +
+    "    \"name\": \"Tiny Travel Wins\",\n" +
+    "    \"issues\": [\n" +
+    "      {\n" +
+    "        \"id\": \"ttw-01\",\n" +
+    "        \"title\": \"Tiny Travel Wins #1\",\n" +
+    "        \"status\": \"Draft\",\n" +
+    "        \"blocks\": [\n" +
+    "          { \"kind\": \"Story\", \"title\": \"One hand cream, three airports\", \"body\": \"我在三个机场之间只带了一支 50g 的固体护手霜。\", \"links\": [], \"image_alt\": null },\n" +
+    "          { \"kind\": \"Cta\", \"title\": \"Try it this weekend\", \"body\": \"前 50 名回复的读者获赠试用装。\", \"links\": [ { \"role\": \"PrimaryCta\", \"label\": \"Shop now\", \"url\": \"https://shop.example/hs\", \"utm\": null } ], \"image_alt\": null }\n" +
+    "        ],\n" +
+    "        \"claims\": [\n" +
+    "          { \"text\": \"8 hour hydration\", \"status\": \"Pending\", \"evidence\": null }\n" +
+    "        ]\n" +
+    "      }\n" +
+    "    ]\n" +
+    "  }\n" +
+    "}"
+}
 
 /// 取字符串前 n 个字符（UTF-16 安全近似）
 fn take(s : String, n : Int) -> String {

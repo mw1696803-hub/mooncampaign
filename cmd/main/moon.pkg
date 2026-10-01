@@ -1,4 +1,5 @@
 import {
+  "moonbitlang/core/env" @env,
   "mw1696803-hub/mooncampaign/core" @core,
   "mw1696803-hub/mooncampaign/dsl" @dsl,
   "mw1696803-hub/mooncampaign/gates" @gates,
