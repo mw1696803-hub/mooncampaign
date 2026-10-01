@@ -195,6 +195,52 @@ pub fn IssueStatus::label(self : IssueStatus) -> String {
   }
 }
 
+/// 信息类型的稳定标识（用于 JSON 互操作，不可本地化）
+pub fn BlockKind::code(self : BlockKind) -> String {
+  match self {
+    Story => "Story"
+    Pain => "Pain"
+    Evidence => "Evidence"
+    Tip => "Tip"
+    Product => "Product"
+    Cta => "Cta"
+    Resource => "Resource"
+    Interaction => "Interaction"
+  }
+}
+
+/// 链接角色的稳定标识（用于 JSON 互操作）
+pub fn LinkRole::code(self : LinkRole) -> String {
+  match self {
+    PrimaryCta => "PrimaryCta"
+    Opening => "Opening"
+    Middle => "Middle"
+    Closing => "Closing"
+    Resource => "Resource"
+    Reply => "Reply"
+  }
+}
+
+/// 声明状态的稳定标识（用于 JSON 互操作）
+pub fn ClaimStatus::code(self : ClaimStatus) -> String {
+  match self {
+    Approved => "Approved"
+    Pending => "Pending"
+    Blocked => "Blocked"
+  }
+}
+
+/// 单期状态的稳定标识（用于 JSON 互操作）
+pub fn IssueStatus::code(self : IssueStatus) -> String {
+  match self {
+    Draft => "Draft"
+    Gated => "Gated"
+    Ready => "Ready"
+    Approved => "Approved"
+    Published => "Published"
+  }
+}
+
 /// 信息类型的中文标签（用于诊断信息输出）
 pub fn BlockKind::label(self : BlockKind) -> String {
   match self {
