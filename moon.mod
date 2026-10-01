@@ -9,13 +9,13 @@
 //   "moonbitlang/x@0.4.6",
 // }
 
-name = "your-github-username/mooncampaign"
+name = "mw1696803-hub/mooncampaign"
 
 version = "0.1.0"
 
 readme = "README.md"
 
-repository = "https://github.com/your-github-username/mooncampaign"
+repository = "https://github.com/mw1696803-hub/mooncampaign"
 
 license = "Apache-2.0"
 

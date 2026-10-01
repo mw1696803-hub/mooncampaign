@@ -1,7 +1,7 @@
 # mooncampaign —— 类型安全的系列内容编排引擎
 
 > 申报书 · MoonBit 黑客松 · 2026-10
-> 替换占位：`[参赛者]`、`[GitHub 链接]`、`[联系方式]`
+> 替换占位：`[参赛者]`、`https://github.com/mw1696803-hub/mooncampaign`、`[联系方式]`
 
 ## 一、项目价值与生态定位
 
@@ -50,4 +50,4 @@
 | 4 | CLI + 示例 + 文档 + CI | 第 2–3 周 |
 | 5 | 接入 moontemplate + WASM skill 发布 | 第 3 周（冲刺） |
 
-团队：`[参赛者]`（1–2 人，核心逻辑 + 示例）。GitHub：`[GitHub 链接]`。
+团队：`[参赛者]`（1–2 人，核心逻辑 + 示例）。GitHub：`https://github.com/mw1696803-hub/mooncampaign`。

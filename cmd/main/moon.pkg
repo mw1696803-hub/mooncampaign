@@ -1,11 +1,11 @@
 import {
-  "your-github-username/mooncampaign/core" @core,
-  "your-github-username/mooncampaign/dsl" @dsl,
-  "your-github-username/mooncampaign/gates" @gates,
-  "your-github-username/mooncampaign/links" @links,
-  "your-github-username/mooncampaign/render" @render,
-  "your-github-username/mooncampaign/qa" @qa,
-  "your-github-username/mooncampaign/retro" @retro,
+  "mw1696803-hub/mooncampaign/core" @core,
+  "mw1696803-hub/mooncampaign/dsl" @dsl,
+  "mw1696803-hub/mooncampaign/gates" @gates,
+  "mw1696803-hub/mooncampaign/links" @links,
+  "mw1696803-hub/mooncampaign/render" @render,
+  "mw1696803-hub/mooncampaign/qa" @qa,
+  "mw1696803-hub/mooncampaign/retro" @retro,
 }
 
 pkgtype(kind: "executable")
