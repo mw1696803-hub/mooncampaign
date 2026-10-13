@@ -16,6 +16,7 @@ fn main {
     "gate" => run_gate()
     "json" => run_json(args)
     "retro" => run_retro(args)
+    "render" => run_render(args)
     "help" => print_help()
     _ => {
       println("未知命令: " + cmd)
@@ -31,6 +32,7 @@ fn print_help() -> Unit {
   println("  gate             事实/声明门禁演示")
   println("  json '<JSON>'    解析 Campaign/Issue JSON 并诊断")
   println("  retro '<反馈>'   复盘反馈 → 规则提炼")
+  println("  render [fmt]    渲染内置示例 Issue（fmt: html/text/markdown/json，默认 text）")
   println("  help             显示本说明")
 }
 
@@ -248,6 +250,25 @@ fn run_retro(args : Array[String]) -> Unit {
   for r in rules {
     println("  - " + r)
   }
+}
+
+/// render：渲染内置示例 Issue 到 stdout（fmt: html/text/markdown/json）
+fn run_render(args : Array[String]) -> Unit {
+  let rest = cmd_args(args)
+  let fmt = if rest.is_empty() { "text" } else { rest[0] }
+  let issue = build_issue()
+  match fmt {
+    "html" => println(@render.render_html(issue))
+    "text" => println(@render.render_text(issue))
+    "markdown" => println(@render.render_markdown(issue))
+    "json" => println(@render.render_json(issue))
+    _ => {
+      println("未知格式: " + fmt + "（支持 html/text/markdown/json）")
+      return
+    }
+  }
+  println("\n# 阅读时长估算: " + issue.estimated_reading_minutes().to_string() +
+    " 分钟（总字符 " + issue.total_chars().to_string() + "）")
 }
 
 /// 构造虚构品牌 Campaign Brief
