@@ -66,6 +66,31 @@ pub fn render_markdown(issue : @core.Issue) -> String {
   md
 }
 
+/// 渲染为纯文本（ESP multipart/alternative 的 text/plain 部分必需）
+/// 无 HTML 标签，链接写成「label <url>」，宽字符按换行折行
+pub fn render_text(issue : @core.Issue) -> String {
+  let mut out = issue.title + "\n"
+  out = out + "=" + repeat_str("=", issue.title.length()) + "\n\n"
+  for b in issue.blocks {
+    out = out + "[" + b.kind.label() + "] " + b.title + "\n"
+    out = out + b.body + "\n"
+    for l in b.links {
+      out = out + "  " + l.label + " <" + l.url + ">" + "\n"
+    }
+    out = out + "\n"
+  }
+  out
+}
+
+/// 重复字符串 n 次（内部工具）
+fn repeat_str(s : String, n : Int) -> String {
+  let mut out = ""
+  for i = 0; i < n; i = i + 1 {
+    out = out + s
+  }
+  out
+}
+
 /// 渲染为 JSON（自包含序列化，供 Agent / 工具链消费）
 pub fn render_json(issue : @core.Issue) -> String {
   let mut s = "{\n  \"id\": " + json_str(issue.id) + ",\n"

@@ -28,3 +28,17 @@ test "JSON 渲染转义引号" {
 test "HTML 转义拦截危险字符" {
   assert_eq(escape_html("<script>&\"</script>"), "&lt;script&gt;&amp;&quot;&lt;/script&gt;")
 }
+
+test "纯文本渲染无 HTML 标签且链接可读" {
+  let issue = @core.Issue::new("i1", "Weekly #1")
+  let b = @core.Block::new(@core.BlockKind::Cta, "Buy now", "body")
+  b.links.push(@core.Link::new(@core.LinkRole::PrimaryCta, "Shop", "https://shop.example"))
+  issue.blocks.push(b)
+  let txt = render_text(issue)
+  assert_true(txt.contains("Weekly #1"))
+  assert_true(txt.contains("[主行动] Buy now"))
+  assert_true(txt.contains("Shop <https://shop.example>"))
+  // 不能出现 HTML 标签
+  assert_true(!txt.contains("<p"))
+  assert_true(!txt.contains("<h2"))
+}
