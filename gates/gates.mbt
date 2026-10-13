@@ -77,3 +77,34 @@ pub fn can_approve(issue : @core.Issue) -> Bool {
 pub fn can_publish(issue : @core.Issue) -> Bool {
   issue.status == @core.IssueStatus::Approved
 }
+
+/// 验收 / 发布审计记录（由调用方存入日志系统）
+pub(all) struct ApprovalRecord {
+  action : String
+  actor : String
+  issue_id : String
+}
+
+/// 带审计记录的人工验收：只有 Ready 可升级为 Approved
+/// 返回（新 Issue, 审计记录）；状态不合法时记录 action = "rejected"
+pub fn approve_with_record(issue : @core.Issue, approver : String) -> (@core.Issue, ApprovalRecord) {
+  match issue.status {
+    @core.IssueStatus::Ready => (
+      { ..issue, status: @core.IssueStatus::Approved },
+      { action: "approve", actor: approver, issue_id: issue.id },
+    )
+    _ => (issue, { action: "rejected", actor: approver, issue_id: issue.id })
+  }
+}
+
+/// 带审计记录的发布：只有 Approved 可升级为 Published
+/// channel 为发布渠道（esp / blog / social），记录进审计日志
+pub fn publish_with_record(issue : @core.Issue, channel : String) -> (@core.Issue, ApprovalRecord) {
+  match issue.status {
+    @core.IssueStatus::Approved => (
+      { ..issue, status: @core.IssueStatus::Published },
+      { action: "publish", actor: channel, issue_id: issue.id },
+    )
+    _ => (issue, { action: "rejected", actor: channel, issue_id: issue.id })
+  }
+}

@@ -57,3 +57,34 @@ test "状态机：只有 Ready 才能 Approved，只有 Approved 才能 Publishe
   assert_true(can_publish(approved))
   assert_eq(publish(approved).status, @core.IssueStatus::Published)
 }
+
+test "带审计记录的 approve：Ready → Approved + approver 记录" {
+  let ready = { ..@core.Issue::new("i1", "x"), status: @core.IssueStatus::Ready }
+  let (issue, rec) = approve_with_record(ready, "voice-owner-zhang")
+  assert_eq(issue.status, @core.IssueStatus::Approved)
+  assert_eq(rec.action, "approve")
+  assert_eq(rec.actor, "voice-owner-zhang")
+  assert_eq(rec.issue_id, "i1")
+}
+
+test "带审计记录的 approve：非 Ready 被拒绝" {
+  let draft = @core.Issue::new("i1", "x")
+  let (issue, rec) = approve_with_record(draft, "voice-owner-zhang")
+  assert_eq(issue.status, @core.IssueStatus::Draft)
+  assert_eq(rec.action, "rejected")
+}
+
+test "带审计记录的 publish：Approved → Published + channel 记录" {
+  let approved = { ..@core.Issue::new("i1", "x"), status: @core.IssueStatus::Approved }
+  let (issue, rec) = publish_with_record(approved, "esp")
+  assert_eq(issue.status, @core.IssueStatus::Published)
+  assert_eq(rec.action, "publish")
+  assert_eq(rec.actor, "esp")
+}
+
+test "带审计记录的 publish：非 Approved 被拒绝" {
+  let ready = { ..@core.Issue::new("i1", "x"), status: @core.IssueStatus::Ready }
+  let (issue, rec) = publish_with_record(ready, "esp")
+  assert_eq(issue.status, @core.IssueStatus::Ready)
+  assert_eq(rec.action, "rejected")
+}
