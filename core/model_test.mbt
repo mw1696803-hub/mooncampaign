@@ -26,3 +26,26 @@ test "Campaign 组合 Brief 与 Series" {
   assert_eq(campaign.brief.product, "Solid Hand Cream")
   assert_eq(campaign.series.id, "ttw")
 }
+
+test "阅读时长估算：空期最少 1 分钟" {
+  let issue = Issue::new("i1", "Title")
+  assert_eq(issue.estimated_reading_minutes(), 1)
+}
+
+test "阅读时长估算：按字数换算" {
+  let issue = Issue::new("i1", "Title")
+  // 900 字符正文 ≈ 3 分钟
+  let body = repeat_str("a", 900)
+  issue.blocks.push(Block::new(BlockKind::Story, "Story", body))
+  let mins = issue.estimated_reading_minutes()
+  assert_true(mins >= 2 && mins <= 4)
+  assert_true(issue.total_chars() > 900)
+}
+
+fn repeat_str(s : String, n : Int) -> String {
+  let mut out = ""
+  for i = 0; i < n; i = i + 1 {
+    out = out + s
+  }
+  out
+}

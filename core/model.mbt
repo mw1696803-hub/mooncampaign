@@ -254,3 +254,34 @@ pub fn BlockKind::label(self : BlockKind) -> String {
     Interaction => "互动"
   }
 }
+
+/// 估算一期内容的阅读时长（分钟）。
+/// 按 300 字/分钟（中文邮件阅读速度），向上取整，最少 1 分钟。
+/// 真实运营经验：邮件建议 2–5 分钟读完，超过 5 分钟应拆期。
+pub fn Issue::estimated_reading_minutes(self : Issue) -> Int {
+  let mut chars = 0
+  for b in self.blocks {
+    chars = chars + b.title.length() + b.body.length()
+  }
+  for c in self.claims {
+    chars = chars + c.text.length()
+  }
+  let minutes = chars / 300
+  if minutes < 1 {
+    1
+  } else {
+    minutes
+  }
+}
+
+/// 一期内容的总字符数（标题+正文+声明）
+pub fn Issue::total_chars(self : Issue) -> Int {
+  let mut chars = self.title.length()
+  for b in self.blocks {
+    chars = chars + b.title.length() + b.body.length()
+  }
+  for c in self.claims {
+    chars = chars + c.text.length()
+  }
+  chars
+}
