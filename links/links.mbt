@@ -31,6 +31,38 @@ pub fn check_primary_cta_uniqueness(issue : @core.Issue) -> Array[String] {
   }
 }
 
+/// Google Analytics 认可的 UTM medium 合法值
+pub fn is_valid_utm_medium(medium : String) -> Bool {
+  let allowed = ["email", "social", "cpc", "organic", "referral", "display", "affiliate"]
+  allowed.contains(medium)
+}
+
+/// 完整 UTM builder：五参数（source/medium/campaign/term/content），
+/// term 与 content 为可选（传空串则不拼）。返回 None 若 medium 非法。
+pub fn make_utm_full(
+  url : String,
+  source : String,
+  medium : String,
+  campaign : String,
+  term : String,
+  content : String,
+) -> String? {
+  if !is_valid_utm_medium(medium) {
+    return None
+  }
+  let sep = if url.contains("?") { "&" } else { "?" }
+  let mut q = "utm_source=" + encode(source) +
+    "&utm_medium=" + encode(medium) +
+    "&utm_campaign=" + encode(campaign)
+  if !term.is_empty() {
+    q = q + "&utm_term=" + encode(term)
+  }
+  if !content.is_empty() {
+    q = q + "&utm_content=" + encode(content)
+  }
+  Some(url + sep + q)
+}
+
 /// 为一期所有链接补全 UTM（返回新 Issue，不修改原对象）
 pub fn attach_utms(issue : @core.Issue, campaign : String) -> @core.Issue {
   let blocks : Array[@core.Block] = []

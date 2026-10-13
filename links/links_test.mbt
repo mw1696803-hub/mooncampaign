@@ -42,3 +42,31 @@ test "attach_utms 为所有链接补全 UTM" {
   // 原对象不被修改
   assert_eq(check_utms_attached(issue).length(), 1)
 }
+
+test "UTM medium 合法值校验" {
+  assert_true(is_valid_utm_medium("email"))
+  assert_true(is_valid_utm_medium("social"))
+  assert_true(is_valid_utm_medium("cpc"))
+  assert_true(!is_valid_utm_medium("news-letter"))
+  assert_true(!is_valid_utm_medium(""))
+}
+
+test "make_utm_full 五参数拼接" {
+  let url = make_utm_full("https://shop.example/p", "newsletter", "email", "ttw-01", "hand-cream", "primary-cta")
+  assert_true(url is Some(_))
+  match url {
+    Some(u) => {
+      assert_true(u.contains("utm_source=newsletter"))
+      assert_true(u.contains("utm_medium=email"))
+      assert_true(u.contains("utm_campaign=ttw-01"))
+      assert_true(u.contains("utm_term=hand-cream"))
+      assert_true(u.contains("utm_content=primary-cta"))
+    }
+    None => assert_true(false)
+  }
+}
+
+test "make_utm_full 非法 medium 返回 None" {
+  let url = make_utm_full("https://shop.example/p", "newsletter", "newsletter", "c", "", "")
+  assert_true(url is None)
+}
