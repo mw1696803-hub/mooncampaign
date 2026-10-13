@@ -34,3 +34,34 @@ test "多样化系列通过检查" {
   let problems = @qa.run_series_qa(series)
   assert_true(problems.is_empty())
 }
+
+test "严重等级分类" {
+  match @qa.classify("链接协议非法：x -> y") {
+    Blocker => ()
+    _ => assert_true(false)
+  }
+  match @qa.classify("图片模块缺少 alt 文本：「x」") {
+    Warning => ()
+    _ => assert_true(false)
+  }
+  match @qa.classify("邮件主题过长（80 字符，建议 ≤ 60）") {
+    Info => ()
+    _ => assert_true(false)
+  }
+}
+
+test "render_checklist 空问题输出通过" {
+  let s = @qa.render_checklist([])
+  assert_true(s.contains("全部通过"))
+}
+
+test "render_checklist 分级输出" {
+  let problems : Array[String] = []
+  problems.push("链接协议非法：x -> y")
+  problems.push("图片模块缺少 alt 文本：「x」")
+  problems.push("邮件主题过长（80 字符，建议 ≤ 60）")
+  let s = @qa.render_checklist(problems)
+  assert_true(s.contains("阻断"))
+  assert_true(s.contains("警告"))
+  assert_true(s.contains("提示"))
+}

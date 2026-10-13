@@ -135,3 +135,63 @@ pub fn run_series_qa(series : @core.Series) -> Array[String] {
   problems.append(check_cta_diversity(series))
   problems
 }
+
+/// 问题严重等级
+pub(all) enum Severity {
+  /// 阻断：必须修复才能发布（Blocked 声明、协议非法、主行动多个、多期重复）
+  Blocker
+  /// 警告：建议修复（待核验声明、缺 alt、正文重复、标题重复）
+  Warning
+  /// 提示：可选优化（主题偏长、预览偏长）
+  Info
+} derive(Debug, Eq)
+
+/// 按问题文本推断严重等级
+pub fn classify(p : String) -> Severity {
+  if p.contains("阻断") || p.contains("非法") || p.contains("超过一个") ||
+    p.contains("多期重复") {
+    Blocker
+  } else if p.contains("待核验") || p.contains("占位") || p.contains("缺少") ||
+    p.contains("重复") {
+    Warning
+  } else {
+    Info
+  }
+}
+
+/// 把问题列表格式化为人类可读的发布前 checklist
+pub fn render_checklist(problems : Array[String]) -> String {
+  if problems.is_empty() {
+    return "[发布前检查] 全部通过，可发布。"
+  }
+  let blockers : Array[String] = []
+  let warnings : Array[String] = []
+  let infos : Array[String] = []
+  for p in problems {
+    match classify(p) {
+      Blocker => blockers.push(p)
+      Warning => warnings.push(p)
+      Info => infos.push(p)
+    }
+  }
+  let mut out = "[发布前检查] 共 " + problems.length().to_string() + " 项：\n"
+  if !blockers.is_empty() {
+    out = out + "\n  ✗ 阻断（必须修复）：\n"
+    for p in blockers {
+      out = out + "    - " + p + "\n"
+    }
+  }
+  if !warnings.is_empty() {
+    out = out + "\n  ⚠ 警告（建议修复）：\n"
+    for p in warnings {
+      out = out + "    - " + p + "\n"
+    }
+  }
+  if !infos.is_empty() {
+    out = out + "\n  ℹ 提示（可选优化）：\n"
+    for p in infos {
+      out = out + "    - " + p + "\n"
+    }
+  }
+  out
+}
