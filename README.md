@@ -1,6 +1,8 @@
 # mooncampaign
 
-**多期内容编排与校验引擎（Multi-issue Content Orchestration & Validation Engine）**
+**LLM 出草稿，mooncampaign 出可发布的成品。**
+
+生成是自由的，发布必须过门禁。
 
 一个类型安全的纯逻辑库：把「多期系列内容」（邮件 Newsletter、社媒系列、课程章节、播客节目、落地页系列）的结构编排、事实门禁、链接一致性、发布前 QA、复盘反馈，抽象成可 `moon add` 复用的领域模型与校验函数。
 
@@ -31,6 +33,24 @@ Agent 工具栈与渲染层已基本就位，但缺内容结构引擎这一层�
 上游生成裸文本/JSON，下游只负责单文档排版——中间缺「多期内容的领域模型 + 门禁状态机 + 一致性校验」这一层。
 
 ## 安装与使用
+
+```
+$ moon run cmd/main -- demo
+═══ Campaign 完整闭环演示 ═══
+[1/6] 加载 Campaign：Solid Hand Cream Launch (5 issues)
+[2/6] 门禁检查：Issue 1 / 5
+  ✗ Blocker: Claim "8-hour hydration" has no verified fact
+[3/6] 事实核验后重新门禁…
+  ✓ All gates passed for Issue 1
+[4/6] 链接编排：5 links, 1 primary CTA, UTM complete
+[5/6] QA checklist:
+  ✓ Subject length 42 chars
+  ✓ All links https
+  ⚠ Warning: Image missing alt text (3 images)
+  ✓ No duplicate body text
+[6/6] 渲染输出：HTML email / text/plain / JSON
+═══ 完成：1 issue approved, ready to publish ═══
+```
 
 ```bash
 moon add mw1696803-hub/mooncampaign
