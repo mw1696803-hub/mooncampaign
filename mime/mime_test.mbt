@@ -73,3 +73,27 @@ test "build message basic structure" {
   // base64 of "Hello World" should be present
   assert_true(output.contains("SGVsbG8gV29ybGQ="))
 }
+
+test "quoted printable ASCII passthrough" {
+  let encoded = quoted_printable_encode("Hello World!")
+  assert_eq(encoded, "Hello World!")
+}
+
+test "quoted printable encodes equals sign" {
+  let encoded = quoted_printable_encode("a=b")
+  assert_true(encoded.contains("=3D"))
+}
+
+test "quoted printable encodes non-ASCII byte" {
+  // é in UTF-8 is 0xC3 0xA9
+  let encoded = quoted_printable_encode("café")
+  // Should contain =C3=A9 sequence
+  assert_true(encoded.contains("=C3=A9"))
+}
+
+test "quoted printable soft line break" {
+  // Long string should have soft line breaks (= followed by newline)
+  let long = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  let encoded = quoted_printable_encode(long)
+  assert_true(encoded.contains("=\n"))
+}
