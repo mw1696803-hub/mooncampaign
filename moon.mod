@@ -19,8 +19,8 @@ repository = "https://github.com/mw1696803-hub/mooncampaign"
 
 license = "Apache-2.0"
 
-keywords = ["campaign", "email", "newsletter", "content", "orchestration", "ai"]
+keywords = ["email", "mime", "rfc5322", "rfc2045", "multipart", "base64", "quoted-printable", "mail"]
 
 preferred_target = "wasm"
 
-description = "类型安全的系列内容编排引擎：Campaign 建模、门禁、链接编排、渲染、QA 与复盘反馈闭环"
+description = "RFC 5322 / MIME email message builder for MoonBit — protocol-level encoding, multipart boundaries, and header folding"
