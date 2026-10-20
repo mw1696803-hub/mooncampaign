@@ -52,15 +52,22 @@ MoonBit 生态已有 HTML 解析器（`moonbit-community/html`）、模板引擎
 
 ## 4. 拟实现的核心功能（已完成）
 
-1. **Mailbox / Message 数据结构**：类型安全的邮件元数据模型
-2. **Base64 编码器**：RFC 4648 标准，带 padding
+**主包 `mime/`（协议实现）：**
+
+1. **Mailbox / Message 数据结构**：类型安全的邮件元数据模型，支持 To/Cc/Bcc 多收件人
+2. **Base64 编码器**：RFC 4648 标准，带 padding，支持 Bytes/字符串输入
 3. **Quoted-printable 编码器**：RFC 2045 标准，76 字符软换行
 4. **RFC 2047 encoded-word**：非 ASCII header 自动编码（=?UTF-8?B?...?=）
-5. **Header 折叠**：RFC 5322 长 header 78 字符折行
-6. **multipart/alternative 构建**：text/plain + text/html 双版本，boundary 自动生成
-7. **Golden fixture 测试**：字节级正确性验证（base64 标准向量、QP 编码、完整消息结构）
+5. **RFC 5322 日期格式化**：Sakamoto 星期计算 + 时区偏移（+0800/-0500）
+6. **Header 折叠**：RFC 5322 长 header 78 字符折行
+7. **multipart 嵌套构建**：multipart/alternative（text+html）与 multipart/mixed（含附件），boundary 自动生成
+8. **附件支持**：二进制 payload base64 编码 + Content-Disposition
+9. **自定义 headers**：X-*、List-Unsubscribe 等透传
+10. **Golden fixture 测试**：字节级正确性验证 + Python `email.mime` 交叉验证（19/19 往返检查通过）
 
-**明确不做**：SMTP 客户端、IMAP、POP3、模板引擎、内容运营逻辑（这些是上层应用的事）。
+**仓库结构**：`mime/` 为独立可复用协议库；`content-tools/` 为构建于 mime 之上的内容编排示例层（领域模型、门禁、QA），演示库的实际用法。
+
+**明确不做**：SMTP 客户端、IMAP、POP3、模板引擎（这些是上层应用的事）。
 
 ## 5. 原创性说明
 
@@ -74,6 +81,6 @@ MoonBit 生态已有 HTML 解析器（`moonbit-community/html`）、模板引擎
 
 [https://github.com/mw1696803-hub/mooncampaign](https://github.com/mw1696803-hub/mooncampaign)
 
-* commits 持续更新中，核心 mime 包为独立功能模块；
+* commits 持续更新中，mime 为主包（协议实现），content-tools 为上层示例层；
 * CI（GitHub Actions：moon check + moon test + moon build）已在 main 分支真实运行通过；
-* 测试 75/75 通过；Apache-2.0 许可证；preferred_target=wasm。
+* 测试 87/87 通过；Apache-2.0 许可证；preferred_target=wasm。

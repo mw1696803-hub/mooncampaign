@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>mooncampaign — LLM 出草稿，mooncampaign 出可发布的成品</title>
+<title>mooncampaign/mime — RFC 5322 MIME email message builder for MoonBit</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background: #0d1117; color: #c9d1d9; line-height: 1.7; }
@@ -16,6 +16,7 @@
   .hero .sub { font-size: 16px; color: #58a6ff; margin-bottom: 32px; }
   .hero .badges { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
   .badge { background: #161b22; border: 1px solid #30363d; border-radius: 20px; padding: 6px 16px; font-size: 13px; color: #8b949e; }
+  .badge.hl { border-color: #7ee787; color: #7ee787; }
 
   /* Section */
   section { padding: 48px 0; border-top: 1px solid #21262d; }
@@ -27,8 +28,8 @@
   .flow-box { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px 20px; text-align: center; min-width: 140px; }
   .flow-box .label { font-size: 12px; color: #8b949e; margin-bottom: 4px; }
   .flow-box .name { font-size: 15px; font-weight: 600; color: #f0f6fc; }
-  .flow-box.gate { border-color: #f9ab00; background: #1c1910; }
-  .flow-box.gate .name { color: #f9ab00; }
+  .flow-box.protocol { border-color: #7ee787; background: #0f1a12; }
+  .flow-box.protocol .name { color: #7ee787; }
   .arrow { color: #484f58; font-size: 20px; }
 
   /* Terminal */
@@ -39,9 +40,9 @@
   .terminal-body .prompt { color: #7ee787; }
   .terminal-body .cmd { color: #f0f6fc; }
   .terminal-body .output { color: #8b949e; }
-  .terminal-body .ok { color: #7ee787; }
-  .terminal-body .blocker { color: #ff7b72; }
-  .terminal-body .warn { color: #f9ab00; }
+  .terminal-body .hdr { color: #58a6ff; }
+  .terminal-body .ct { color: #d2a8ff; }
+  .terminal-body .enc { color: #7ee787; }
 
   /* Table */
   table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px; }
@@ -54,6 +55,7 @@
   .pkg { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 14px; }
   .pkg .name { font-family: monospace; color: #7ee787; font-size: 14px; margin-bottom: 4px; }
   .pkg .desc { font-size: 12px; color: #8b949e; }
+  .pkg.main { border-color: #7ee787; }
 
   /* CTA */
   .cta { text-align: center; padding: 48px 0; border-top: 1px solid #21262d; }
@@ -66,44 +68,45 @@
 <div class="container">
 
   <div class="hero">
-    <h1>mooncampaign</h1>
-    <div class="tagline"><strong style="color:#f0f6fc;">LLM 出草稿，mooncampaign 出可发布的成品。</strong></div>
-    <div class="sub">生成是自由的，发布必须过门禁。</div>
+    <h1>mooncampaign / mime</h1>
+    <div class="tagline"><strong style="color:#f0f6fc;">RFC 5322 MIME email message builder for MoonBit.</strong></div>
+    <div class="sub">结构化数据 → 标准 MIME 字节流，编译成 Wasm 到处可跑。</div>
     <div class="badges">
+      <span class="badge hl">RFC 5322 / 2045 / 2046 / 2047</span>
       <span class="badge">Apache-2.0</span>
       <span class="badge">WASM 优先</span>
-      <span class="badge">63 tests</span>
+      <span class="badge">87 tests</span>
       <span class="badge">MoonBit</span>
     </div>
   </div>
 
   <section>
     <h2>它在生态里的位置</h2>
-    <p>MoonBit 的 Agent 工具栈已经拼好了——LLM 客户端、浏览器控制、工作流引擎、单文档渲染。唯独缺一层：<strong style="color:#f9ab00">LLM 生成的内容进来之后，怎么按规则校验、能不能发布。</strong></p>
+    <p>MoonBit 已有 HTML 解析器、模板引擎、JSON 工具，但缺一个标准实现：<strong style="color:#7ee787">MIME 消息构建</strong>。任何需要生成邮件字节流的项目都在重复实现协议编解码。mooncampaign/mime 补上这一层。</p>
     <div class="flow">
       <div class="flow-box">
-        <div class="label">上游</div>
-        <div class="name">LLM / Agent</div>
-        <div class="label" style="margin-top:4px;">生成草稿</div>
+        <div class="label">输入</div>
+        <div class="name">结构化数据</div>
+        <div class="label" style="margin-top:4px;">From / To / Subject / Body / Attach</div>
       </div>
       <div class="arrow">→</div>
-      <div class="flow-box gate">
+      <div class="flow-box protocol">
         <div class="label">这一层是我们</div>
-        <div class="name">mooncampaign</div>
-        <div class="label" style="margin-top:4px;">结构校验 · 事实门禁 · QA</div>
+        <div class="name">mime</div>
+        <div class="label" style="margin-top:4px;">headers · multipart · base64/QP</div>
       </div>
       <div class="arrow">→</div>
       <div class="flow-box">
-        <div class="label">下游</div>
-        <div class="name">渲染 / 发送</div>
-        <div class="label" style="margin-top:4px;">HTML · ESP · WASM</div>
+        <div class="label">输出</div>
+        <div class="name">RFC 5322 字节流</div>
+        <div class="label" style="margin-top:4px;">SMTP · ESP · Wasm</div>
       </div>
     </div>
   </section>
 
   <section>
     <h2>跑一下看看</h2>
-    <p>纯逻辑库，无外部服务依赖。装了 MoonBit 就能跑：</p>
+    <p>纯协议库，无外部依赖。装了 MoonBit 就能跑：</p>
     <div class="terminal">
       <div class="terminal-header">
         <div class="dot" style="background:#ff5f56;"></div>
@@ -112,47 +115,51 @@
         <span style="margin-left:8px;">bash</span>
       </div>
       <div class="terminal-body">
-<span class="prompt">$</span> <span class="cmd">moon run cmd/main -- demo</span>
-<span class="output">═══ Campaign 完整闭环演示 ═══</span>
-
-<span class="output">[1/6] 加载 Campaign：Solid Hand Cream Launch (5 issues)</span>
-<span class="output">[2/6] 门禁检查：Issue 1 / 5</span>
-<span class="blocker">  ✗ Blocker: Claim "8-hour hydration" has no verified fact</span>
-<span class="output">[3/6] 事实核验后重新门禁…</span>
-<span class="ok">  ✓ All gates passed for Issue 1</span>
-<span class="output">[4/6] 链接编排：5 links, 1 primary CTA, UTM complete</span>
-<span class="output">[5/6] QA checklist:</span>
-<span class="ok">  ✓ Subject length 42 chars</span>
-<span class="ok">  ✓ All links https</span>
-<span class="warn">  ⚠ Warning: Image missing alt text (3 images)</span>
-<span class="ok">  ✓ No duplicate body text</span>
-<span class="output">[6/6] 渲染输出：HTML email / text/plain / JSON</span>
-<span class="output">═══ 完成：1 issue approved, ready to publish ═══</span>
+<span class="prompt">$</span> <span class="cmd">moon run examples/mime-demo</span>
+<span class="hdr">From:</span> <span class="output">Freshcia &lt;hello@freshcia.com&gt;</span>
+<span class="hdr">To:</span> <span class="output">Alice &lt;alice@example.com&gt;, &lt;bob@example.com&gt;</span>
+<span class="hdr">Subject:</span> <span class="output">=?UTF-8?B?5qyi6L+O5L2/55SoIEZyZXNoY2lhIOaJi+mcnA==?=</span>
+<span class="hdr">Date:</span> <span class="output">Thu, 15 Oct 2026 12:00:00 +0800</span>
+<span class="hdr">Content-Type:</span> <span class="ct">multipart/mixed; boundary="BOUNDARY_mix_..."</span>
+<span class="output">  ├─ multipart/alternative</span>
+<span class="output">  │   ├─ text/plain  (<span class="enc">base64</span>)</span>
+<span class="output">  │   └─ text/html   (<span class="enc">base64</span>)</span>
+<span class="output">  └─ application/pdf; name="freshcia-catalog.pdf" (<span class="enc">base64</span>)</span>
+<span class="ok" style="color:#7ee787">✓ RFC 5322 message built — verified by Python email.mime (19/19 checks)</span>
       </div>
     </div>
   </section>
 
   <section>
-    <h2>七个包，各司其职</h2>
+    <h2>实现的标准</h2>
+    <table>
+      <tr><th>RFC</th><th>内容</th><th>状态</th></tr>
+      <tr><td>RFC 5322</td><td>Internet Message Format — headers、折叠、日期格式</td><td>✅</td></tr>
+      <tr><td>RFC 2045</td><td>MIME Part One — Content-Transfer-Encoding</td><td>✅ base64 + quoted-printable</td></tr>
+      <tr><td>RFC 2046</td><td>MIME Part Two — multipart 边界与嵌套</td><td>✅ alternative + mixed</td></tr>
+      <tr><td>RFC 2047</td><td>MIME Part Three — 非 ASCII header 编码</td><td>✅ encoded-word (B)</td></tr>
+      <tr><td>RFC 4648</td><td>Base64 字母表</td><td>✅</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>仓库结构</h2>
     <div class="packages">
-      <div class="pkg"><div class="name">core</div><div class="desc">类型安全领域模型 + 阅读时长估算</div></div>
-      <div class="pkg"><div class="name">dsl</div><div class="desc">模块序列编排规则（信息类型交替）</div></div>
-      <div class="pkg"><div class="name">gates</div><div class="desc">事实门禁 + 验收状态机 + 审计记录</div></div>
-      <div class="pkg"><div class="name">links</div><div class="desc">链接编排 + UTM 五参数 builder</div></div>
-      <div class="pkg"><div class="name">render</div><div class="desc">HTML/Markdown/text/JSON 渲染 + 自包含 JSON 解析</div></div>
-      <div class="pkg"><div class="name">qa</div><div class="desc">发布前检查 + 系列多样性 + 分级 checklist</div></div>
-      <div class="pkg"><div class="name">retro</div><div class="desc">复盘记录 + 可配置规则表 → 下一期</div></div>
+      <div class="pkg main"><div class="name">mime</div><div class="desc">主包：RFC 5322 MIME 消息构建（协议实现）</div></div>
+      <div class="pkg"><div class="name">content-tools/</div><div class="desc">示例层：构建于 mime 之上的内容编排演示（core/dsl/gates/links/render/qa/retro）</div></div>
+      <div class="pkg"><div class="name">examples/mime-demo</div><div class="desc">带附件 + 中文 subject 的可运行 demo</div></div>
+      <div class="pkg"><div class="name">examples/mime-demo/verify</div><div class="desc">Python email.mime 交叉验证脚本</div></div>
     </div>
   </section>
 
   <section>
     <h2>对标其他语言生态</h2>
     <table>
-      <tr><th>参考库</th><th>我们借鉴了什么</th><th>区别</th></tr>
-      <tr><td>Zod / Valibot (TS)</td><td>类型安全运行时校验</td><td>它们是通用 schema，我们是多期内容垂直领域模型</td></tr>
-      <tr><td>Pydantic (Python)</td><td>数据模型 + 校验分离</td><td>通用 vs 内置内容领域逻辑（Block/Claim/Link）</td></tr>
-      <tr><td>react-email (TS)</td><td>邮件组件化结构</td><td>它们管单封渲染，我们管多期编排与门禁</td></tr>
-      <tr><td>Contentful / Sanity (SaaS)</td><td>内容模型 + 工作流状态机</td><td>云端 SaaS vs 纯本地 WASM 可分发开源库</td></tr>
+      <tr><th>语言</th><th>库</th><th>性质</th></tr>
+      <tr><td>Python (stdlib)</td><td>email.mime</td><td>MIME 消息构建</td></tr>
+      <tr><td>Node.js</td><td>nodemailer</td><td>MIME 消息构建 + SMTP</td></tr>
+      <tr><td>Rust</td><td>lettre</td><td>MIME 消息构建 + SMTP</td></tr>
+      <tr><td><strong>MoonBit</strong></td><td><strong>mooncampaign/mime</strong></td><td><strong>MIME 消息构建（本项目，生态缺口）</strong></td></tr>
     </table>
   </section>
 
