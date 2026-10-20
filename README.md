@@ -1,4 +1,4 @@
-# mooncampaign/mime
+# mooncampaign
 
 **RFC 5322 / MIME email message builder for MoonBit.**
 
@@ -6,24 +6,42 @@ Protocol-level MIME serialization: turn structured email data into standard-comp
 
 > This is a **protocol implementation / foundational library**, not a specific product. It implements the MIME standard (RFC 5322 / 2045 / 2046 / 2047) so that any MoonBit project needing to construct email messages doesn't have to re-implement it from scratch.
 
-## What it does
-
-Builds a complete RFC-compliant email message (headers + multipart body) from simple struct inputs:
+## Repository layout
 
 ```
-From / To / Subject / Date / Message-ID
-Content-Type: multipart/alternative; boundary="..."
-  ├── text/plain part  (base64 encoded)
-  └── text/html part   (base64 encoded)
+mooncampaign/
+├── mime/                 ← main package: RFC 5322 MIME message builder
+├── content-tools/        ← example layer: content orchestration built on top of mime
+│   ├── core/             (Campaign/Issue/Block domain model, gates, QA)
+│   ├── dsl/  gates/  links/  render/  qa/  retro/
+├── cmd/main/             CLI entry point
+└── examples/
+    ├── mime-demo/        build a message with attachment + Chinese subject
+    └── fictional-brand-demo/  content-tools usage demo
+```
+
+`mime` is the deliverable: a standalone, reusable protocol library. `content-tools` demonstrates one application of MIME message construction (a newsletter content pipeline) — it depends on `mime` and shows how the library is used in practice.
+
+## What `mime` does
+
+Builds a complete RFC-compliant email message from simple struct inputs:
+
+```
+From / To / Cc / Bcc / Subject / Date / Message-ID / custom headers
+Content-Type: multipart/mixed; boundary="..."
+  ├── multipart/alternative
+  │   ├── text/plain part  (base64 or quoted-printable)
+  │   └── text/html part   (base64)
+  └── attachment part      (base64, Content-Disposition: attachment)
 ```
 
 ## Standards implemented
 
 | RFC | What | Status |
 |---|---|---|
-| RFC 5322 | Internet Message Format (headers, folding) | ✅ |
+| RFC 5322 | Internet Message Format (headers, folding, date format) | ✅ |
 | RFC 2045 | MIME Part One (Content-Transfer-Encoding) | ✅ base64 + quoted-printable |
-| RFC 2046 | MIME Part Two (multipart boundaries) | ✅ multipart/alternative |
+| RFC 2046 | MIME Part Two (multipart boundaries, nesting) | ✅ multipart/alternative + mixed |
 | RFC 2047 | MIME Part Three (non-ASCII headers) | ✅ encoded-word (B encoding) |
 | RFC 4648 | Base64 alphabet | ✅ |
 
@@ -42,15 +60,25 @@ No existing package implements MIME message construction. We fill this gap:
 ```moonbit
 let msg : Message = {
   from: { name: "Freshcia", email: "hello@freshcia.com" },
-  to: { name: "", email: "customer@example.com" },
-  subject: "Welcome to Freshcia",
-  date: "Wed, 15 Oct 2026 12:00:00 +0800",
+  to: [{ name: "Alice", email: "alice@example.com" }],
+  cc: [],
+  bcc: [],
+  subject: "欢迎使用 Freshcia 手霜",     // non-ASCII → RFC 2047 auto-encoded
+  date: format_rfc5322_date(2026, 10, 15, 12, 0, 0, 480),
   message_id: "<abc123@freshcia.com>",
   text_body: "Hello World",
   html_body: "<p>Hello World</p>",
+  attachments: [{ filename: "catalog.pdf", content_type: "application/pdf", data: pdf_bytes }],
+  extra_headers: [("List-Unsubscribe", "<https://freshcia.com/unsub>")],
 }
 let bytes = build_message(msg)
-// → complete RFC 5322 message string, ready for SMTP
+// → complete RFC 5322 message, ready for SMTP
+```
+
+Try the live demo:
+
+```
+moon run examples/mime-demo
 ```
 
 ## Benchmarks against other ecosystems
@@ -60,18 +88,20 @@ let bytes = build_message(msg)
 | Python (stdlib) | `email.mime` | MIME message construction |
 | Node.js | `nodemailer` | MIME message construction |
 | Rust | `lettre` | MIME message construction |
-| **MoonBit** | **moonccampaign/mime** | **this package** |
+| **MoonBit** | **mooncampaign/mime** | **this package** |
 
 ## Testing
 
-Golden fixture tests verify byte-level correctness against known RFC examples:
+1. **Golden fixture tests** (byte-level, 87 tests project-wide):
+   - Base64 vectors (RFC 4648: `Man` → `TWFu`, `Ma` → `TWE=`, `M` → `TQ==`)
+   - Quoted-printable encoding (RFC 2045: soft line breaks at 76 chars)
+   - RFC 2047 encoded-word for non-ASCII headers
+   - RFC 5322 date formatting (day-of-week computation, timezone offsets)
+   - Multipart nesting (alternative inside mixed), attachments, multiple recipients
+   - Custom headers, header folding
 
-- Base64 vectors (RFC 4648: `Man` → `TWFu`, `Ma` → `TWE=`, `M` → `TQ==`)
-- Quoted-printable encoding (RFC 2045: soft line breaks at 76 chars)
-- RFC 2047 encoded-word for non-ASCII headers
-- Full multipart/alternative message structure
-
-Total: 75 tests passing.
+2. **Cross-verification against Python's standard library** (`examples/mime-demo/verify_with_python.py`):
+   The output of `build_message` is parsed by Python `email` (strict RFC 5322 policy) and every field is checked for round-trip fidelity: headers, decoded RFC 2047 subject, multipart structure, base64-decoded body, attachment filename + content. **19/19 checks pass.**
 
 ## License
 

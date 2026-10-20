@@ -1,12 +1,12 @@
 import {
   "moonbitlang/core/env" @env,
-  "mw1696803-hub/mooncampaign/core" @core,
-  "mw1696803-hub/mooncampaign/dsl" @dsl,
-  "mw1696803-hub/mooncampaign/gates" @gates,
-  "mw1696803-hub/mooncampaign/links" @links,
-  "mw1696803-hub/mooncampaign/render" @render,
-  "mw1696803-hub/mooncampaign/qa" @qa,
-  "mw1696803-hub/mooncampaign/retro" @retro,
+  "mw1696803-hub/mooncampaign/content-tools/core" @core,
+  "mw1696803-hub/mooncampaign/content-tools/dsl" @dsl,
+  "mw1696803-hub/mooncampaign/content-tools/gates" @gates,
+  "mw1696803-hub/mooncampaign/content-tools/links" @links,
+  "mw1696803-hub/mooncampaign/content-tools/render" @render,
+  "mw1696803-hub/mooncampaign/content-tools/qa" @qa,
+  "mw1696803-hub/mooncampaign/content-tools/retro" @retro,
 }
 
 pkgtype(kind: "executable")
