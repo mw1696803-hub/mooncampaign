@@ -1,0 +1,35 @@
+From: Freshcia <hello@freshcia.com>
+To: Alice <alice@example.com>, <bob@example.com>
+Cc: <carol@example.com>
+Subject: =?UTF-8?B?5qyi6L+O5L2/55SoIEZyZXNoY2lhIOaJi+mcnA==?=
+MIME-Version: 1.0
+Date: Thu, 15 Oct 2026 12:00:00 +0800
+Message-ID: <demo-20261015@freshcia.com>
+X-Campaign: launch-v1
+List-Unsubscribe: <https://freshcia.com/unsub>
+Content-Type: multipart/mixed; boundary="BOUNDARY_mix_mooncampaign_2026"
+Content-Transfer-Encoding: 7bit
+
+--BOUNDARY_mix_mooncampaign_2026
+Content-Type: multipart/alternative; boundary="BOUNDARY_alt_mooncampaign_2026"
+
+--BOUNDARY_alt_mooncampaign_2026
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: base64
+
+SGVsbG8sIHRoaXMgaXMgdGhlIHBsYWluIHRleHQgdmVyc2lvbi4=
+--BOUNDARY_alt_mooncampaign_2026
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: base64
+
+PHA+SGVsbG8sIHRoaXMgaXMgdGhlIDxiPkhUTUw8L2I+IHZlcnNpb24uPC9wPg==
+--BOUNDARY_alt_mooncampaign_2026--
+--BOUNDARY_mix_mooncampaign_2026
+Content-Type: application/pdf; name="freshcia-catalog.pdf"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="freshcia-catalog.pdf"
+
+JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyA+PgplbmRvYmoKdHJhaWxlcgo8PCAvUm9vdCAxIDAgUiA+PgolJUVPRg==
+--BOUNDARY_mix_mooncampaign_2026
+--BOUNDARY_mix_mooncampaign_2026--
+
