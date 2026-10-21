@@ -90,15 +90,35 @@ moon run examples/mime-demo
 | Rust | `lettre` | MIME message construction |
 | **MoonBit** | **mooncampaign/mime** | **this package** |
 
+## WebAssembly Component
+
+`mime` is a pure, I/O-free protocol library, so it compiles to a **WebAssembly component** (Component Model) that any host runtime (Spin, Wasmtime, Wasmer) can consume directly — the direction MoonBit officially promotes (WIT + wit-bindgen, now in the Bytecode Alliance's official guide).
+
+- Interface definition: [`wit/mime.wit`](wit/mime.wit) — `build-message`, `base64-encode`, `quoted-printable-encode`
+- Build & consume walkthrough: [`examples/wasm-component/README.md`](examples/wasm-component/README.md)
+- Stub forwarding example: [`examples/wasm-component/stub-forward-example.mbt`](examples/wasm-component/stub-forward-example.mbt)
+
+```bash
+wit-bindgen moonbit wit/mime.wit --out-dir wasm-component
+moon build --target wasm
+wasm-tools component embed wit _build/wasm/release/build/gen/gen.wasm \
+  --encoding utf16 --output mime.wasm
+wasm-tools component new mime.wasm --output mime.component.wasm
+wasmtime run --invoke 'base64-encode("Hello")' mime.component.wasm
+# SGVsbG8=
+```
+
 ## Testing
 
-1. **Golden fixture tests** (byte-level, 87 tests project-wide):
+1. **Golden fixture tests** (byte-level, 94 tests project-wide):
    - Base64 vectors (RFC 4648: `Man` → `TWFu`, `Ma` → `TWE=`, `M` → `TQ==`)
    - Quoted-printable encoding (RFC 2045: soft line breaks at 76 chars)
    - RFC 2047 encoded-word for non-ASCII headers
    - RFC 5322 date formatting (day-of-week computation, timezone offsets)
    - Multipart nesting (alternative inside mixed), attachments, multiple recipients
    - Custom headers, header folding
+   - **CRLF line endings** (RFC 5322 compliance: zero naked LF in output)
+   - **Header injection protection** (CR/LF in subject / names / values neutralized)
 
 2. **Cross-verification against Python's standard library** (`examples/mime-demo/verify_with_python.py`):
    The output of `build_message` is parsed by Python `email` (strict RFC 5322 policy) and every field is checked for round-trip fidelity: headers, decoded RFC 2047 subject, multipart structure, base64-decoded body, attachment filename + content. **19/19 checks pass.**

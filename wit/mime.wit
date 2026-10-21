@@ -1,0 +1,54 @@
+package mooncampaign:mime@0.1.0;
+
+/// RFC 5322 / MIME message building exposed as a WebAssembly component.
+/// This is the component-model interface for mooncampaign/mime: any host
+/// (Spin, Wasmtime, Wasmer, Cloudflare Workers with component support)
+/// can import this world and generate standard email message bytes.
+interface mime-builder {
+  /// An email address with optional display name.
+  record mailbox {
+    name: string,
+    email: string,
+  }
+
+  /// A file attachment (binary payload, base64-encoded by the builder).
+  record attachment {
+    filename: string,
+    content-type: string,
+    data: list<u8>,
+  }
+
+  /// A custom header pair, e.g. ("X-Campaign", "launch").
+  record header {
+    name: string,
+    value: string,
+  }
+
+  /// A complete message to build.
+  record message {
+    from: mailbox,
+    to: list<mailbox>,
+    cc: list<mailbox>,
+    bcc: list<mailbox>,
+    subject: string,
+    date: string,
+    message-id: string,
+    text-body: string,
+    html-body: string,
+    attachments: list<attachment>,
+    extra-headers: list<header>,
+  }
+
+  /// Build a complete RFC 5322 MIME message (CRLF line endings).
+  build-message: func(msg: message) -> string;
+
+  /// RFC 4648 base64 encoder (no line wrapping; safe for encoded-words).
+  base64-encode: func(input: string) -> string;
+
+  /// RFC 2045 quoted-printable encoder (CRLF soft breaks).
+  quoted-printable-encode: func(input: string) -> string;
+}
+
+world mime {
+  export mime-builder;
+}

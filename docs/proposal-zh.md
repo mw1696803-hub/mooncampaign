@@ -40,7 +40,7 @@ MoonBit 生态已有 HTML 解析器（`moonbit-community/html`）、模板引擎
 
 **对 MoonBit 生态的贡献：**
 
-① 补齐 MIME 协议这一互联网基础协议的 MoonBit 实现；② 纯函数/无 I/O，编译成 Wasm 后可在浏览器端邮件编辑器、边缘函数中使用；③ Golden fixture 测试验证字节级正确性，和 moonkafka 的协议编解码测试同等级别。
+① 补齐 MIME 协议这一互联网基础协议的 MoonBit 实现；② 纯函数/无 I/O，编译成 Wasm 组件后可在浏览器端邮件编辑器、边缘函数（Spin/Wasmtime）中使用，已提供 WIT 组件接口定义（`wit/mime.wit`）与构建示例；③ Golden fixture 测试验证字节级正确性（CRLF 行结束、header 注入防护），和 moonkafka 的协议编解码测试同等级别。
 
 ## 3. 预期使用场景
 
@@ -63,9 +63,10 @@ MoonBit 生态已有 HTML 解析器（`moonbit-community/html`）、模板引擎
 7. **multipart 嵌套构建**：multipart/alternative（text+html）与 multipart/mixed（含附件），boundary 自动生成
 8. **附件支持**：二进制 payload base64 编码 + Content-Disposition
 9. **自定义 headers**：X-*、List-Unsubscribe 等透传
-10. **Golden fixture 测试**：字节级正确性验证 + Python `email.mime` 交叉验证（19/19 往返检查通过）
+10. **Golden fixture 测试**：字节级正确性验证（CRLF 行结束、header 注入防护）+ Python `email.mime` 交叉验证（19/19 往返检查通过）
+11. **Wasm 组件接口（WIT）**：`wit/mime.wit` 定义组件接口，可编译为 Wasm 组件部署到 Spin/Wasmtime 等边缘运行时
 
-**仓库结构**：`mime/` 为独立可复用协议库；`content-tools/` 为构建于 mime 之上的内容编排示例层（领域模型、门禁、QA），演示库的实际用法。
+**仓库结构**：`mime/` 为独立可复用协议库（含 WIT 组件接口）；`content-tools/` 为构建于 mime 之上的内容编排示例层（领域模型、门禁、QA），演示库的实际用法。
 
 **明确不做**：SMTP 客户端、IMAP、POP3、模板引擎（这些是上层应用的事）。
 
@@ -83,4 +84,4 @@ MoonBit 生态已有 HTML 解析器（`moonbit-community/html`）、模板引擎
 
 * commits 持续更新中，mime 为主包（协议实现），content-tools 为上层示例层；
 * CI（GitHub Actions：moon check + moon test + moon build）已在 main 分支真实运行通过；
-* 测试 87/87 通过；Apache-2.0 许可证；preferred_target=wasm。
+* 测试 94/94 通过；Apache-2.0 许可证；preferred_target=wasm。
