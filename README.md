@@ -110,7 +110,7 @@ wasmtime run --invoke 'base64-encode("Hello")' mime.component.wasm
 
 ## Testing
 
-1. **Golden fixture tests** (byte-level, 94 tests project-wide):
+1. **Golden fixture tests** (byte-level, 108 tests project-wide):
    - Base64 vectors (RFC 4648: `Man` → `TWFu`, `Ma` → `TWE=`, `M` → `TQ==`)
    - Quoted-printable encoding (RFC 2045: soft line breaks at 76 chars)
    - RFC 2047 encoded-word for non-ASCII headers
@@ -119,9 +119,21 @@ wasmtime run --invoke 'base64-encode("Hello")' mime.component.wasm
    - Custom headers, header folding
    - **CRLF line endings** (RFC 5322 compliance: zero naked LF in output)
    - **Header injection protection** (CR/LF in subject / names / values neutralized)
+   - **Robustness/edge cases**: 1200-char subjects, emoji/CJK/combining/zero-width Unicode,
+     empty and 100 KB attachments, CRLF in bodies, 50 recipients, exact folding/wrap boundaries
 
 2. **Cross-verification against Python's standard library** (`examples/mime-demo/verify_with_python.py`):
    The output of `build_message` is parsed by Python `email` (strict RFC 5322 policy) and every field is checked for round-trip fidelity: headers, decoded RFC 2047 subject, multipart structure, base64-decoded body, attachment filename + content. **19/19 checks pass.**
+
+## Performance
+
+`moon bench bench/` (native, local machine, 2026-10):
+
+| Benchmark | time (mean ± σ) |
+|---|---|
+| base64_encode_string (56-byte input) | ~10–14 µs |
+| quoted_printable_encode (60-byte input) | ~10–14 µs |
+| build_message (3 recipients + text/html bodies + PDF attachment) | ~13–20 ms |
 
 ## License
 

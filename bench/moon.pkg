@@ -1,0 +1,3 @@
+import {
+  "mw1696803-hub/mooncampaign/mime" @mime,
+}

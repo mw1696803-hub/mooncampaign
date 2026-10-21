@@ -2,11 +2,18 @@
 
 ## 1. 基本信息
 
+
+
 * 项目名称：mooncampaign/mime：RFC 5322 MIME 邮件消息构建库
+
 * 参赛者：张思仪
+
 * 联系方式：17188804556
+
 * GitHub 仓库链接：[https://github.com/mw1696803-hub/mooncampaign](https://github.com/mw1696803-hub/mooncampaign)
+
 * 项目方向：新生态项目建设（原创可复用库）
+
 * 是否为原创项目：是（协议实现全部原创）
 
 ## 2. 项目简介
@@ -17,32 +24,38 @@
 
 **对标其他语言成熟生态库：**
 
-| 参考库 | 语言/生态 | 性质 |
-|---|---|---|
-| `email.mime` | Python 标准库 | MIME 消息构建 |
-| `nodemailer` | Node.js | MIME 消息构建 + SMTP |
-| `lettre` | Rust | MIME 消息构建 + SMTP |
+
+
+| 参考库                   | 语言 / 生态     | 性质                 |
+| --------------------- | ----------- | ------------------ |
+| `email.mime`          | Python 标准库  | MIME 消息构建          |
+| `nodemailer`          | Node.js     | MIME 消息构建 + SMTP   |
+| `lettre`              | Rust        | MIME 消息构建 + SMTP   |
 | **mooncampaign/mime** | **MoonBit** | **MIME 消息构建（本项目）** |
 
 **实现的标准协议：**
 
-| RFC | 内容 | 实现状态 |
-|---|---|---|
-| RFC 5322 | Internet Message Format（headers、CRLF 行结束、78 字符折叠、日期格式） | ✅ |
-| RFC 2045 | MIME Part One（Content-Transfer-Encoding、76 列换行） | ✅ base64 + quoted-printable |
-| RFC 2046 | MIME Part Two（multipart boundaries） | ✅ alternative + mixed（含附件） |
-| RFC 2047 | MIME Part Three（非 ASCII header 编码） | ✅ encoded-word (B 编码) |
-| RFC 4648 | Base64 字母表 | ✅ 含 MIME 76 列分行版本 |
+
+
+| RFC      | 内容                                                     | 实现状态                        |
+| -------- | ------------------------------------------------------ | --------------------------- |
+| RFC 5322 | Internet Message Format（headers、CRLF 行结束、78 字符折叠、日期格式） | ✅                           |
+| RFC 2045 | MIME Part One（Content-Transfer-Encoding、76 列换行）        | ✅ base64 + quoted-printable |
+| RFC 2046 | MIME Part Two（multipart boundaries）                    | ✅ alternative + mixed（含附件）  |
+| RFC 2047 | MIME Part Three（非 ASCII header 编码）                     | ✅ encoded-word (B 编码)       |
+| RFC 4648 | Base64 字母表                                             | ✅ 含 MIME 76 列分行版本           |
 
 **生态缺口（mooncakes.io 2026-10 检索）：**
 
-MoonBit 生态已有 HTML 解析器（`moonbit-community/html`）、模板引擎（`moontemplate`、`mold`），但**没有 MIME 消息构建库**。任何需要在 MoonBit 中生成标准格式邮件的项目，都需要自己实现协议编解码——这是基础设施级的缺失。
+MoonBit 生态已有 HTML 解析器（`moonbit-community/html`）、模板引擎（`moontemplate`、`mold`），但**没有 MIME 消息构建库**。任何需要在 MoonBit 中生成标准格式邮件的项目，都需要自己实现协议编解码 —— 这是基础设施级的缺失。
 
 **对 MoonBit 生态的贡献：**
 
-① 补齐 MIME 协议这一互联网基础协议的 MoonBit 实现；② 纯函数/无 I/O，编译成 Wasm 组件后可在浏览器端邮件编辑器、边缘函数（Spin/Wasmtime）中使用，已提供 WIT 组件接口定义（`wit/mime.wit`）与构建示例；③ Golden fixture 测试验证字节级正确性（CRLF 行结束、header 注入防护），和 moonkafka 的协议编解码测试同等级别。
+① 补齐 MIME 协议这一互联网基础协议的 MoonBit 实现；② 纯函数 / 无 I/O，编译成 Wasm 组件后可在浏览器端邮件编辑器、边缘函数（Spin/Wasmtime）中使用，已提供 WIT 组件接口定义（`wit/mime.wit`）与构建示例；③ Golden fixture 测试验证字节级正确性（CRLF 行结束、header 注入防护），和 moonkafka 的协议编解码测试同等级别。
 
 ## 3. 预期使用场景
+
+
 
 1. **任何需要在 MoonBit 中构建邮件消息的项目**：用 `moon add` 引入，直接得到 RFC 5322 标准输出，不用自己实现 MIME 编解码。
 
@@ -52,26 +65,41 @@ MoonBit 生态已有 HTML 解析器（`moonbit-community/html`）、模板引擎
 
 ## 4. 拟实现的核心功能（已完成）
 
-**主包 `mime/`（协议实现）：**
+**主包&#x20;**`mime/`**（协议实现）：**
 
 **协议编码层：**
-1. **Base64 编码器**：RFC 4648 标准，带 padding，支持 Bytes/字符串输入；MIME body 自动 76 列分行（RFC 2045）
+
+
+
+1. **Base64 编码器**：RFC 4648 标准，带 padding，支持 Bytes / 字符串输入；MIME body 自动 76 列分行（RFC 2045）
+
 2. **Quoted-printable 编码器**：RFC 2045 标准，76 字符软换行（`=\r\n`）
+
 3. **RFC 2047 encoded-word**：非 ASCII header 自动编码（=?UTF-8?B?...?=），encoded-word 保持单行
 
 **消息结构层：**
-4. **Mailbox / Message 数据结构**：类型安全的邮件元数据模型，支持 To/Cc/Bcc 多收件人
-5. **RFC 5322 日期格式化**：Sakamoto 星期计算 + 时区偏移（+0800/-0500）
-6. **Header 折叠**：RFC 5322 长 header 78 字符折行（CRLF + 空格续行）
-7. **multipart 嵌套构建**：multipart/alternative（text+html）与 multipart/mixed（含附件），boundary 自动生成
-8. **附件支持**：二进制 payload base64 编码 + Content-Disposition
-9. **自定义 headers**：X-*、List-Unsubscribe 等透传
+
+4\. **Mailbox / Message 数据结构**：类型安全的邮件元数据模型，支持 To/Cc/Bcc 多收件人
+
+5\. **RFC 5322 日期格式化**：Sakamoto 星期计算 + 时区偏移（+0800/-0500）
+
+6\. **Header 折叠**：RFC 5322 长 header 78 字符折行（CRLF + 空格续行）
+
+7\. **multipart 嵌套构建**：multipart/alternative（text+html）与 multipart/mixed（含附件），boundary 自动生成
+
+8\. **附件支持**：二进制 payload base64 编码 + Content-Disposition
+
+9\. **自定义 headers**：X-\*、List-Unsubscribe 等透传
 
 **正确性与安全：**
-10. **CRLF 行结束**：全部输出严格 CRLF（RFC 5322），零裸 LF（字节级验证）
-11. **Header 注入防护**：`sanitize_header_value` / `has_injection_chars`，subject、收件人姓名/邮箱、自定义 header 名值、附件文件名均中和 CR/LF，杜绝伪造 header
-12. **Golden fixture 测试**：mime 包 31 个字节级测试（base64 标准向量、QP、encoded-word、日期已知星期、CRLF 合规、注入中和）+ Python `email.mime` 交叉验证（19/19 往返检查通过）
-13. **Wasm 组件接口（WIT）**：`wit/mime.wit` 定义组件接口（build-message / base64-encode / quoted-printable-encode），可编译为 Wasm 组件部署到 Spin/Wasmtime 等边缘运行时
+
+10\. **CRLF 行结束**：全部输出严格 CRLF（RFC 5322），零裸 LF（字节级验证）
+
+11\. **Header 注入防护**：`sanitize_header_value` / `has_injection_chars`，subject、收件人姓名 / 邮箱、自定义 header 名值、附件文件名均中和 CR/LF，杜绝伪造 header
+
+12\. **Golden fixture 测试**：mime 包 45 个字节级测试（base64 标准向量、QP、encoded-word、日期已知星期、CRLF 合规、注入中和、健壮性/边界）+ Python `email.mime` 交叉验证（19/19 往返检查通过）+ `moon bench` 性能基准（base64 / QP / build_message 吞吐）
+
+13\. **Wasm 组件接口（WIT）**：`wit/mime.wit` 定义组件接口（build-message /base64-encode /quoted-printable-encode），可编译为 Wasm 组件部署到 Spin/Wasmtime 等边缘运行时
 
 **仓库结构**：`mime/` 为独立可复用协议库（含 WIT 组件接口）；`content-tools/` 为构建于 mime 之上的内容编排示例层（领域模型、门禁、QA），演示库的实际用法。
 
@@ -89,6 +117,10 @@ MoonBit 生态已有 HTML 解析器（`moonbit-community/html`）、模板引擎
 
 [https://github.com/mw1696803-hub/mooncampaign](https://github.com/mw1696803-hub/mooncampaign)
 
+
+
 * 26 commits，mime 为主包（协议实现），content-tools 为上层示例层；
+
 * CI（GitHub Actions：moon check + moon test + moon build）已在 main 分支真实运行通过；
-* 测试 94/94 通过（mime 31 个字节级测试 + Python email.mime 交叉验证 19/19）；Apache-2.0 许可证；preferred_target=wasm。
+
+* 测试 108/108 通过（mime 45 个字节级测试 + Python email.mime 交叉验证 19/19 + moon bench 基准）；Apache-2.0 许可证；preferred\_target=wasm。
