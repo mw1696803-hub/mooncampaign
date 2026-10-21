@@ -4,6 +4,21 @@ All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.0] - 2026-10-21
+
+### Added
+
+- **RFC 5322 message parser** (`mime/parse.mbt`) — the inverse of `build_message`:
+  - `parse_headers` — header block parsing with continuation-line unfolding
+  - `get_header` — case-insensitive field lookup
+  - `base64_decode_string` — RFC 4648 base64 decoding (line breaks ignored)
+  - `quoted_printable_decode_string` — RFC 2045 QP decoding (soft breaks removed)
+  - `decode_encoded_word` — RFC 2047 encoded-word decoding (B encoding)
+  - `split_multipart` — MIME boundary splitting
+- **Parser round-trip tests** (21 new, 129 project-wide): build → parse → identical
+  fields, including a CJK subject decoded back from its RFC 2047 form, RFC base64/QP
+  vectors, folded-header unfolding, and multipart splitting
+
 ## [0.1.0] - 2026-10-21
 
 ### Added
@@ -34,4 +49,5 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - None (initial release).
 
+[0.2.0]: https://github.com/mw1696803-hub/mooncampaign/releases/tag/v0.2.0
 [0.1.0]: https://github.com/mw1696803-hub/mooncampaign/releases/tag/v0.1.0

@@ -51,7 +51,7 @@ MoonBit 生态已有 HTML 解析器（`moonbit-community/html`）、模板引擎
 
 **对 MoonBit 生态的贡献：**
 
-① 补齐 MIME 协议这一互联网基础协议的 MoonBit 实现；② 纯函数 / 无 I/O，编译成 Wasm 组件后可在浏览器端邮件编辑器、边缘函数（Spin/Wasmtime）中使用，已提供 WIT 组件接口定义（`wit/mime.wit`）与构建示例；③ Golden fixture 测试验证字节级正确性（CRLF 行结束、header 注入防护），和 moonkafka 的协议编解码测试同等级别。
+① 补齐 MIME 协议这一互联网基础协议的 MoonBit 实现，且**构建 + 解析双向闭环**（对标库 email.mime / lettre 均为双向）；② 纯函数 / 无 I/O，编译成 Wasm 组件后可在浏览器端邮件编辑器、边缘函数（Spin/Wasmtime）中使用，已提供 WIT 组件接口定义（`wit/mime.wit`）与构建示例；③ Golden fixture 测试验证字节级正确性（CRLF 行结束、header 注入防护、编码-解码往返），和 moonkafka 的协议编解码测试同等级别。
 
 ## 3. 预期使用场景
 
@@ -77,29 +77,41 @@ MoonBit 生态已有 HTML 解析器（`moonbit-community/html`）、模板引擎
 
 3. **RFC 2047 encoded-word**：非 ASCII header 自动编码（=?UTF-8?B?...?=），encoded-word 保持单行
 
+**协议解码层（RFC 5322 解析，构建的逆过程）：**
+
+4\. **Base64 解码器**：RFC 4648 反向，忽略行分隔符与 padding
+
+5\. **Quoted-printable 解码器**：RFC 2045 反向，处理软换行与 =XX 转义
+
+6\. **RFC 2047 encoded-word 解码**：=?UTF-8?B?...?= 还原为可读文本（中文 subject 往返验证）
+
+7\. **Header 解析**：header 块解析 + 折叠续行展开（RFC 5322 unfolding），大小写不敏感字段查找
+
+8\. **Multipart 拆分**：按 boundary 切分 MIME 各部分
+
 **消息结构层：**
 
-4\. **Mailbox / Message 数据结构**：类型安全的邮件元数据模型，支持 To/Cc/Bcc 多收件人
+9\. **Mailbox / Message 数据结构**：类型安全的邮件元数据模型，支持 To/Cc/Bcc 多收件人
 
-5\. **RFC 5322 日期格式化**：Sakamoto 星期计算 + 时区偏移（+0800/-0500）
+10\. **RFC 5322 日期格式化**：Sakamoto 星期计算 + 时区偏移（+0800/-0500）
 
-6\. **Header 折叠**：RFC 5322 长 header 78 字符折行（CRLF + 空格续行）
+11\. **Header 折叠**：RFC 5322 长 header 78 字符折行（CRLF + 空格续行）
 
-7\. **multipart 嵌套构建**：multipart/alternative（text+html）与 multipart/mixed（含附件），boundary 自动生成
+12\. **multipart 嵌套构建**：multipart/alternative（text+html）与 multipart/mixed（含附件），boundary 自动生成
 
-8\. **附件支持**：二进制 payload base64 编码 + Content-Disposition
+13\. **附件支持**：二进制 payload base64 编码 + Content-Disposition
 
-9\. **自定义 headers**：X-\*、List-Unsubscribe 等透传
+14\. **自定义 headers**：X-\*、List-Unsubscribe 等透传
 
 **正确性与安全：**
 
-10\. **CRLF 行结束**：全部输出严格 CRLF（RFC 5322），零裸 LF（字节级验证）
+15\. **CRLF 行结束**：全部输出严格 CRLF（RFC 5322），零裸 LF（字节级验证）
 
-11\. **Header 注入防护**：`sanitize_header_value` / `has_injection_chars`，subject、收件人姓名 / 邮箱、自定义 header 名值、附件文件名均中和 CR/LF，杜绝伪造 header
+16\. **Header 注入防护**：`sanitize_header_value` / `has_injection_chars`，subject、收件人姓名 / 邮箱、自定义 header 名值、附件文件名均中和 CR/LF，杜绝伪造 header
 
-12\. **Golden fixture 测试**：mime 包 45 个字节级测试（base64 标准向量、QP、encoded-word、日期已知星期、CRLF 合规、注入中和、健壮性/边界）+ Python `email.mime` 交叉验证（19/19 往返检查通过）+ `moon bench` 性能基准（base64 / QP / build_message 吞吐）
+17\. **Golden fixture 测试**：mime 包 66 个字节级测试（base64/QP/encoded-word 编解码标准向量、日期已知星期、CRLF 合规、注入中和、健壮性/边界、**构建→解析往返**——中文 subject 经 RFC 2047 编码再解码还原一致）+ Python `email.mime` 交叉验证（19/19 往返检查通过）+ `moon bench` 性能基准（base64 / QP / build_message 吞吐）
 
-13\. **Wasm 组件接口（WIT）**：`wit/mime.wit` 定义组件接口（build-message /base64-encode /quoted-printable-encode），可编译为 Wasm 组件部署到 Spin/Wasmtime 等边缘运行时
+18\. **Wasm 组件接口（WIT）**：`wit/mime.wit` 定义组件接口（build-message /base64-encode /quoted-printable-encode），可编译为 Wasm 组件部署到 Spin/Wasmtime 等边缘运行时
 
 **仓库结构**：`mime/` 为独立可复用协议库（含 WIT 组件接口）；`content-tools/` 为构建于 mime 之上的内容编排示例层（领域模型、门禁、QA），演示库的实际用法。
 
@@ -119,8 +131,8 @@ MoonBit 生态已有 HTML 解析器（`moonbit-community/html`）、模板引擎
 
 
 
-* 26 commits，mime 为主包（协议实现），content-tools 为上层示例层；
+* 32 commits，mime 为主包（协议实现 + RFC 5322 解析器），content-tools 为上层示例层；
 
 * CI（GitHub Actions：moon check + moon test + moon build）已在 main 分支真实运行通过；
 
-* 测试 108/108 通过（mime 45 个字节级测试 + Python email.mime 交叉验证 19/19 + moon bench 基准）；Apache-2.0 许可证；preferred\_target=wasm。
+* 测试 129/129 通过（mime 66 个字节级测试 + Python email.mime 交叉验证 19/19 + moon bench 基准）；Apache-2.0 许可证；preferred\_target=wasm。

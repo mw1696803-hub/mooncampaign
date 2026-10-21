@@ -81,6 +81,24 @@ Try the live demo:
 moon run examples/mime-demo
 ```
 
+## Parsing (the RFC 5322 inverse)
+
+`parse.mbt` implements the other half of the protocol — a message built by
+`build_message` round-trips back through the parser to identical fields:
+
+| API | Purpose |
+|---|---|
+| `parse_headers` | header block parsing with continuation-line unfolding |
+| `get_header` | case-insensitive field lookup |
+| `base64_decode_string` | RFC 4648 base64 decoding (ignores line breaks) |
+| `quoted_printable_decode_string` | RFC 2045 QP decoding (soft breaks removed) |
+| `decode_encoded_word` | RFC 2047 encoded-word decoding (`=?UTF-8?B?...?=`) |
+| `split_multipart` | MIME boundary splitting |
+
+Round-trip verified in tests: build → parse → identical From/To/Subject
+(including a CJK subject that decodes back from its RFC 2047 form), Date,
+Message-ID, custom headers and attachment MIME structure.
+
 ## Positioning
 
 Every mature ecosystem has a standard MIME message builder — Python has `email.mime`, Node has `nodemailer`, Rust has `lettre`. MoonBit does not; this package is that standard piece.
@@ -120,10 +138,13 @@ wasmtime run --invoke 'base64-encode("Hello")' mime.component.wasm
 
 ## Testing
 
-1. **Golden fixture tests** (byte-level, 108 tests project-wide):
-   - Base64 vectors (RFC 4648: `Man` → `TWFu`, `Ma` → `TWE=`, `M` → `TQ==`)
-   - Quoted-printable encoding (RFC 2045: soft line breaks at 76 chars)
-   - RFC 2047 encoded-word for non-ASCII headers
+Full three-layer strategy (RFC vectors, byte-level golden fixtures, Python
+cross-verification) is documented in [`docs/testing.md`](docs/testing.md).
+
+1. **Golden fixture tests** (byte-level, 129 tests project-wide):
+   - Base64 encode + decode vectors (RFC 4648: `Man` → `TWFu`, `Ma` → `TWE=`, `M` → `TQ==`)
+   - Quoted-printable encode + decode (RFC 2045: soft line breaks at 76 chars)
+   - RFC 2047 encoded-word encode + decode for non-ASCII headers
    - RFC 5322 date formatting (day-of-week computation, timezone offsets)
    - Multipart nesting (alternative inside mixed), attachments, multiple recipients
    - Custom headers, header folding
@@ -131,6 +152,8 @@ wasmtime run --invoke 'base64-encode("Hello")' mime.component.wasm
    - **Header injection protection** (CR/LF in subject / names / values neutralized)
    - **Robustness/edge cases**: 1200-char subjects, emoji/CJK/combining/zero-width Unicode,
      empty and 100 KB attachments, CRLF in bodies, 50 recipients, exact folding/wrap boundaries
+   - **Parser round-trip**: `build_message` → `parse_headers` → identical fields,
+     including a CJK subject decoded back from its RFC 2047 form
 
 2. **Cross-verification against Python's standard library** (`examples/mime-demo/verify_with_python.py`):
    The output of `build_message` is parsed by Python `email` (strict RFC 5322 policy) and every field is checked for round-trip fidelity: headers, decoded RFC 2047 subject, multipart structure, base64-decoded body, attachment filename + content. **19/19 checks pass.**
