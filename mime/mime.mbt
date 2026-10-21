@@ -2,10 +2,13 @@
 ///
 /// Implements the standard MIME (Multipurpose Internet Mail Extensions)
 /// protocol for structured content serialization:
-/// - RFC 5322: Internet Message Format (headers, folding, date format)
-/// - RFC 2045: MIME Part One (Content-Transfer-Encoding)
+/// - RFC 5322: Internet Message Format (headers, folding, date format, CRLF line endings)
+/// - RFC 2045: MIME Part One (Content-Transfer-Encoding, 76-column line wrap)
 /// - RFC 2046: MIME Part Two (media types, multipart boundaries)
 /// - RFC 2047: MIME Part Three (encoded-word for non-ASCII headers)
+///
+/// Line endings follow RFC 5322: every line ends with CRLF (carriage return +
+/// line feed). All header values are sanitized against CR/LF injection.
 
 /// An email address with optional display name.
 pub(all) struct Mailbox {
@@ -35,9 +38,40 @@ pub(all) struct Message {
   extra_headers : Array[(String, String)]  // custom headers, e.g. ("X-Campaign", "launch")
 }
 
+// ---------- Line ending ----------
+
+/// RFC 5322 line terminator.
+const CRLF : String = "\r\n"
+
+// ---------- Header injection protection ----------
+
+/// Check whether a string contains CR/LF that could inject header lines.
+pub fn has_injection_chars(value : String) -> Bool {
+  for c in value {
+    if c == '\r' || c == '\n' {
+      return true
+    }
+  }
+  false
+}
+
+/// Replace CR/LF with spaces to neutralize header injection.
+pub fn sanitize_header_value(value : String) -> String {
+  let mut result = ""
+  for c in value {
+    if c == '\r' || c == '\n' {
+      result = result + " "
+    } else {
+      let cs : String = [c]
+      result = result + cs
+    }
+  }
+  result
+}
+
 // ---------- RFC 4648: Base64 encoding ----------
 
-fn base64_encode_bytes_internal(bytes : Bytes) -> String {
+fn base64_encode_internal(bytes : Bytes, wrap_lines : Bool) -> String {
   let table_str = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
   let table_chars : Array[Char] = []
   for c in table_str {
@@ -45,6 +79,7 @@ fn base64_encode_bytes_internal(bytes : Bytes) -> String {
   }
   let len = bytes.length()
   let mut result = ""
+  let mut col = 0
   let mut i = 0
   while i < len {
     let b0 = bytes[i].to_int()
@@ -59,32 +94,48 @@ fn base64_encode_bytes_internal(bytes : Bytes) -> String {
     let c0 : String = [table_chars[s0]]
     let c1 : String = [table_chars[s1]]
     result = result + c0 + c1
+    col = col + 2
     if has_b1 {
       let c2 : String = [table_chars[s2]]
       result = result + c2
+      col = col + 1
     } else {
       result = result + "="
+      col = col + 1
     }
     if has_b2 {
       let c3 : String = [table_chars[s3]]
       result = result + c3
+      col = col + 1
     } else {
       result = result + "="
+      col = col + 1
+    }
+    // RFC 2045: lines must not exceed 76 characters
+    if wrap_lines && col >= 76 {
+      result = result + CRLF
+      col = 0
     }
     i = i + 3
   }
   result
 }
 
-/// Base64 encode a Bytes payload (RFC 4648).
+/// Base64 encode a Bytes payload (RFC 4648, no line wrapping).
 pub fn base64_encode_bytes(bytes : Bytes) -> String {
-  base64_encode_bytes_internal(bytes)
+  base64_encode_internal(bytes, false)
 }
 
-/// Base64 encode a string (UTF-8 bytes).
+/// Base64 encode a string (RFC 4648, no line wrapping).
+/// Used for RFC 2047 encoded-words which must stay on one line.
 pub fn base64_encode_string(input : String) -> String {
   let bytes : Bytes = b"\{input}"
-  base64_encode_bytes_internal(bytes)
+  base64_encode_internal(bytes, false)
+}
+
+/// Base64 encode with RFC 2045 76-column wrapping (for MIME body parts).
+fn base64_encode_wrapped(bytes : Bytes) -> String {
+  base64_encode_internal(bytes, true)
 }
 
 // ---------- RFC 2047: encoded-word for headers ----------
@@ -136,7 +187,7 @@ fn int_to_hex(n : Int) -> String {
   c1 + c2
 }
 
-/// Quoted-printable encode a string per RFC 2045.
+/// Quoted-printable encode a string per RFC 2045 (soft breaks use CRLF).
 pub fn quoted_printable_encode(input : String) -> String {
   let bytes : Bytes = b"\{input}"
   let len = bytes.length()
@@ -148,7 +199,7 @@ pub fn quoted_printable_encode(input : String) -> String {
     if qp_should_encode(b) {
       let enc = "=" + int_to_hex(b)
       if line_len + enc.length() > 76 {
-        result = result + "=\n"
+        result = result + "=" + CRLF
         line_len = 0
       }
       result = result + enc
@@ -156,7 +207,7 @@ pub fn quoted_printable_encode(input : String) -> String {
     } else {
       let c : String = [bytes[i].to_char()]
       if line_len + 1 > 76 {
-        result = result + "=\n"
+        result = result + "=" + CRLF
         line_len = 0
       }
       result = result + c
@@ -169,7 +220,7 @@ pub fn quoted_printable_encode(input : String) -> String {
 
 // ---------- RFC 5322: Header folding ----------
 
-/// Fold a header value at ~78 characters per RFC 5322.
+/// Fold a header value at ~78 characters per RFC 5322 (CRLF + space continuation).
 fn fold_header(value : String) -> String {
   if value.length() <= 78 {
     return value
@@ -179,7 +230,7 @@ fn fold_header(value : String) -> String {
   for c in value {
     let cs : String = [c]
     if line.length() + 1 > 76 {
-      result = result + line + "\n "
+      result = result + line + CRLF + " "
       line = ""
     }
     line = line + cs
@@ -242,13 +293,15 @@ pub fn format_rfc5322_date(
 
 // ---------- Message building ----------
 
-/// Format a Mailbox for use in a From/To header.
+/// Format a Mailbox for use in a From/To header (injection-safe).
 fn format_mailbox(mb : Mailbox) -> String {
-  if mb.name == "" {
-    "<" + mb.email + ">"
+  let safe_name = sanitize_header_value(mb.name)
+  let safe_email = sanitize_header_value(mb.email)
+  if safe_name == "" {
+    "<" + safe_email + ">"
   } else {
-    let quoted_name = encode_header_word(mb.name)
-    quoted_name + " <" + mb.email + ">"
+    let quoted_name = encode_header_word(safe_name)
+    quoted_name + " <" + safe_email + ">"
   }
 }
 
@@ -273,17 +326,17 @@ fn format_mailbox_list(mbs : Array[Mailbox]) -> String {
 /// Build a single MIME part header block.
 fn build_part(content_type : String, transfer_encoding : String, extra : String, body : String) -> String {
   let mut s = ""
-  s = s + "Content-Type: " + content_type + "\n"
+  s = s + "Content-Type: " + content_type + CRLF
   if extra != "" {
-    s = s + extra + "\n"
+    s = s + extra + CRLF
   }
-  s = s + "Content-Transfer-Encoding: " + transfer_encoding + "\n"
-  s = s + "\n"
-  s = s + body + "\n"
+  s = s + "Content-Transfer-Encoding: " + transfer_encoding + CRLF
+  s = s + CRLF
+  s = s + body + CRLF
   s
 }
 
-/// Build the complete RFC 5322 message as a string.
+/// Build the complete RFC 5322 message as a string (CRLF line endings).
 ///
 /// If there are attachments, the top level is multipart/mixed containing a
 /// nested multipart/alternative body plus attachment parts. Otherwise the
@@ -292,47 +345,54 @@ pub fn build_message(msg : Message) -> String {
   let boundary_alt = "BOUNDARY_alt_mooncampaign_2026"
   let mut s = ""
 
-  // Headers
-  s = s + "From: " + fold_header(format_mailbox(msg.from)) + "\n"
-  s = s + "To: " + fold_header(format_mailbox_list(msg.to)) + "\n"
+  // Headers — all values sanitized against CR/LF injection
+  let safe_subject = sanitize_header_value(msg.subject)
+  let safe_date = sanitize_header_value(msg.date)
+  let safe_message_id = sanitize_header_value(msg.message_id)
+  s = s + "From: " + fold_header(format_mailbox(msg.from)) + CRLF
+  s = s + "To: " + fold_header(format_mailbox_list(msg.to)) + CRLF
   if msg.cc.length() > 0 {
-    s = s + "Cc: " + fold_header(format_mailbox_list(msg.cc)) + "\n"
+    s = s + "Cc: " + fold_header(format_mailbox_list(msg.cc)) + CRLF
   }
   if msg.bcc.length() > 0 {
-    s = s + "Bcc: " + fold_header(format_mailbox_list(msg.bcc)) + "\n"
+    s = s + "Bcc: " + fold_header(format_mailbox_list(msg.bcc)) + CRLF
   }
-  s = s + "Subject: " + fold_header(encode_header_word(msg.subject)) + "\n"
-  s = s + "MIME-Version: 1.0\n"
-  s = s + "Date: " + msg.date + "\n"
-  s = s + "Message-ID: " + msg.message_id + "\n"
+  s = s + "Subject: " + fold_header(encode_header_word(safe_subject)) + CRLF
+  s = s + "MIME-Version: 1.0" + CRLF
+  s = s + "Date: " + safe_date + CRLF
+  s = s + "Message-ID: " + safe_message_id + CRLF
   for (name, value) in msg.extra_headers {
-    s = s + name + ": " + fold_header(value) + "\n"
+    let safe_name = sanitize_header_value(name)
+    let safe_value = sanitize_header_value(value)
+    s = s + safe_name + ": " + fold_header(safe_value) + CRLF
   }
 
   // Body: nested alternative inside mixed if attachments exist
   if msg.attachments.length() > 0 {
     let boundary_mix = "BOUNDARY_mix_mooncampaign_2026"
-    s = s + "Content-Type: multipart/mixed; boundary=\"" + boundary_mix + "\"\n"
-    s = s + "Content-Transfer-Encoding: 7bit\n"
-    s = s + "\n"
-    s = s + "--" + boundary_mix + "\n"
-    s = s + "Content-Type: multipart/alternative; boundary=\"" + boundary_alt + "\"\n"
-    s = s + "\n"
+    s = s + "Content-Type: multipart/mixed; boundary=\"" + boundary_mix + "\"" + CRLF
+    s = s + "Content-Transfer-Encoding: 7bit" + CRLF
+    s = s + CRLF
+    s = s + "--" + boundary_mix + CRLF
+    s = s + "Content-Type: multipart/alternative; boundary=\"" + boundary_alt + "\"" + CRLF
+    s = s + CRLF
     s = s + build_alternative_parts(msg, boundary_alt)
-    s = s + "--" + boundary_mix + "\n"
+    s = s + "--" + boundary_mix + CRLF
     for att in msg.attachments {
-      s = s + "Content-Type: " + att.content_type + "; name=\"" + att.filename + "\"\n"
-      s = s + "Content-Transfer-Encoding: base64\n"
-      s = s + "Content-Disposition: attachment; filename=\"" + att.filename + "\"\n"
-      s = s + "\n"
-      s = s + base64_encode_bytes_internal(att.data) + "\n"
-      s = s + "--" + boundary_mix + "\n"
+      let safe_filename = sanitize_header_value(att.filename)
+      let safe_content_type = sanitize_header_value(att.content_type)
+      s = s + "Content-Type: " + safe_content_type + "; name=\"" + safe_filename + "\"" + CRLF
+      s = s + "Content-Transfer-Encoding: base64" + CRLF
+      s = s + "Content-Disposition: attachment; filename=\"" + safe_filename + "\"" + CRLF
+      s = s + CRLF
+      s = s + base64_encode_wrapped(att.data) + CRLF
+      s = s + "--" + boundary_mix + CRLF
     }
-    s = s + "--" + boundary_mix + "--\n"
+    s = s + "--" + boundary_mix + "--" + CRLF
   } else {
-    s = s + "Content-Type: multipart/alternative; boundary=\"" + boundary_alt + "\"\n"
-    s = s + "Content-Transfer-Encoding: 7bit\n"
-    s = s + "\n"
+    s = s + "Content-Type: multipart/alternative; boundary=\"" + boundary_alt + "\"" + CRLF
+    s = s + "Content-Transfer-Encoding: 7bit" + CRLF
+    s = s + CRLF
     s = s + build_alternative_parts(msg, boundary_alt)
   }
   s
@@ -341,20 +401,20 @@ pub fn build_message(msg : Message) -> String {
 /// Build the text/plain + text/html alternative parts (without outer headers).
 fn build_alternative_parts(msg : Message, boundary : String) -> String {
   let mut s = ""
-  s = s + "--" + boundary + "\n"
+  s = s + "--" + boundary + CRLF
   s = s + build_part(
     "text/plain; charset=UTF-8",
     "base64",
     "",
-    base64_encode_string(msg.text_body),
+    base64_encode_wrapped(b"\{msg.text_body}"),
   )
-  s = s + "--" + boundary + "\n"
+  s = s + "--" + boundary + CRLF
   s = s + build_part(
     "text/html; charset=UTF-8",
     "base64",
     "",
-    base64_encode_string(msg.html_body),
+    base64_encode_wrapped(b"\{msg.html_body}"),
   )
-  s = s + "--" + boundary + "--\n"
+  s = s + "--" + boundary + "--" + CRLF
   s
 }
