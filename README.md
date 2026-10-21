@@ -81,7 +81,9 @@ Try the live demo:
 moon run examples/mime-demo
 ```
 
-## Benchmarks against other ecosystems
+## Positioning
+
+Every mature ecosystem has a standard MIME message builder — Python has `email.mime`, Node has `nodemailer`, Rust has `lettre`. MoonBit does not; this package is that standard piece.
 
 | Language | Library | Equivalent |
 |---|---|---|
@@ -89,6 +91,14 @@ moon run examples/mime-demo
 | Node.js | `nodemailer` | MIME message construction |
 | Rust | `lettre` | MIME message construction |
 | **MoonBit** | **mooncampaign/mime** | **this package** |
+
+What this package brings that a hand-rolled implementation usually skips:
+
+- **Strict RFC 5322 line endings (CRLF)** — byte-verified, zero naked LF
+- **Header injection protection** — CR/LF in subject, names, custom headers and filenames is neutralized, so untrusted input cannot forge headers
+- **RFC 2045 76-column wrapping** for base64 bodies, while encoded-words stay single-line (RFC 2047)
+- **Byte-level golden fixtures + Python `email.mime` cross-verification** (19/19) — output provably consumable by an independent standard implementation
+- **Pure, I/O-free, Wasm-first** — compiles to a WebAssembly component with a published WIT interface
 
 ## WebAssembly Component
 
